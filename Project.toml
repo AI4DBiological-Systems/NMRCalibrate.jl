@@ -1,0 +1,13 @@
+name = "NMRCalibrate"
+uuid = "b5b97c24-655f-4fb0-a427-4d7c6a878fd5"
+authors = ["Roy <rwang013@uottawa.ca> and contributors"]
+version = "0.1.0"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[compat]
+julia = "1"
+
+[targets]
+test = ["Test"]
