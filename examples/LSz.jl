@@ -1,10 +1,15 @@
-#include("../src/NMRSpectraSimulator.jl")
+
+
+import NMRDataSetup
 import NMRSpectraSimulator
+
+include("../src/NMRCalibrate.jl")
+import .NMRCalibrate
 
 using LinearAlgebra
 using FFTW
 import PyPlot
-#import BSON
+import BSON
 #import JLD
 
 #import Clustering
@@ -16,7 +21,20 @@ fig_num = 1
 PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "serif"])
 
 ### user inputs.
+projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/"
 
+# project_name = "glucose-700"
+# molecule_names = ["D-(+)-Glucose"; "DSS"]
+# w = [20.0/4.6; 1.0] # BMRB-700 glucose: DSS is 0.0046 M = 4.6 mM.
+
+project_name = "phenylalanine-700"
+molecule_names = ["L-Phenylalanine"; "DSS"]
+w = [20/0.5; 1.0] # BMRB-700 phenylalanine: DSS is 500 micro M.
+
+# path to the GISSMO Julia storage folder.
+base_path_JLD = "/home/roy/Documents/data/NMR/NMRData/src/input/molecules"
+
+# proxy-related.
 tol_coherence = 1e-2
 α_relative_threshold = 0.05
 λ0 = 3.4
@@ -24,27 +42,49 @@ tol_coherence = 1e-2
 κ_λ_lb = 0.5
 κ_λ_ub = 2.5
 
-
-#molecule_names = ["L-Serine"; "L-Phenylalanine"; "DSS";]
-molecule_names = ["D-(+)-Glucose"; "DSS"]
-
-# machine values taken from the BMRB 700 MHz 20 mM glucose experiment.
-fs = 14005.602240896402
-SW = 20.0041938620844
-ν_0ppm = 10656.011933076665
-
-# # machine values for the BMRB 500 MHz glucose experiment.
-# ν_0ppm = 6752.490995937095
-# SW = 16.0196917451925
-# fs = 9615.38461538462
-
-# path to the GISSMO Julia storage folder.
-base_path_JLD = "/home/roy/Documents/data/NMR/NMRData/src/input/molecules"
-
 ### end inputs.
+
+
+## load data.
+load_folder_path = joinpath(projects_dir, project_name)
+load_path = joinpath(load_folder_path, "$(project_name).bson")
+dic = BSON.load(load_path)
+s_t = dic[:s_t]
+fs = dic[:fs]
+SW = dic[:SW]
+ν_0ppm = dic[:ν_0ppm]
+
+# normalize.
+s_t = s_t
 
 hz2ppmfunc = uu->(uu - ν_0ppm)*SW/fs
 ppm2hzfunc = pp->(ν_0ppm + pp*fs/SW)
+
+offset_Hz = ν_0ppm - (ppm2hzfunc(0.3)-ppm2hzfunc(0.0))
+
+N = length(s_t)
+DFT_s = fft(s_t)
+U_DFT, U_y, U_inds = NMRCalibrate.getwraparoundDFTfreqs(N, fs, offset_Hz)
+
+Z = maximum(abs.(DFT_s))
+y = DFT_s[U_inds] ./ Z
+
+##############################
+
+S_U = DFT_s[U_inds] 
+P_y = hz2ppmfunc.(U_y)
+
+PyPlot.figure(fig_num)
+fig_num += 1
+
+PyPlot.plot(P_y, real.(S_U), label = "data spectrum")
+
+PyPlot.legend()
+PyPlot.xlabel("ppm")
+PyPlot.ylabel("real")
+PyPlot.title("data spectra")
+
+#@assert 1==2
 
 
 Δcs_max_mixture = collect( Δcs_max for i = 1:length(molecule_names))
@@ -59,7 +99,7 @@ As = mixture_params
 
 
 u_min = ppm2hzfunc(-0.5)
-u_max = ppm2hzfunc(4.0)
+u_max = ppm2hzfunc(3.0)
 
 NMRSpectraSimulator.fitproxies!(As;
     κ_λ_lb = κ_λ_lb,
@@ -72,11 +112,11 @@ NMRSpectraSimulator.fitproxies!(As;
 
 ### plot.
 
-# purposely distort the spectra by setting non-autophased FID values.
-Ag = As[1]
-Ag.d = rand(length(Ag.d))
-Ag.κs_λ = rand(length(Ag.κs_λ)) .+ 1
-Ag.κs_β = collect( rand(length(Ag.κs_β[i])) .* (2*π) for i = 1:length(Ag.κs_β) )
+# # purposely distort the spectra by setting non-autophased FID values.
+# Ag = As[1]
+# Ag.d = rand(length(Ag.d))
+# Ag.κs_λ = rand(length(Ag.κs_λ)) .+ 1
+# Ag.κs_β = collect( rand(length(Ag.κs_β[i])) .* (2*π) for i = 1:length(Ag.κs_β) )
 
 
 
@@ -107,14 +147,77 @@ println("max discrepancy: ", max_val)
 println()
 
 ## visualize.
-PyPlot.plot(P, real.(f_U), label = "f")
+PyPlot.figure(fig_num)
+fig_num += 1
+
+
+PyPlot.plot(P_y, real.(y), label = "data spectrum")
 PyPlot.plot(P, real.(q_U), label = "q")
 
 PyPlot.legend()
 PyPlot.xlabel("ppm")
 PyPlot.ylabel("real")
-PyPlot.title("f vs q")
+PyPlot.title("data vs q")
 
 
 ### I am here.  given U_cost_LS y_cost_LS locations, least squares z_k, per partition. fit global; no regions.
-# this will go into NMRCalibrate. dev here.
+# this will go into NMRCalibrate. dev here. LS_w_cL.jl in NMRMetaboliteProfiler.
+
+# manual for now. DSS, last molecule.
+Bs = As[end:end]
+Δ_shifts = ones(2) .* 0.05
+w_lb = ones(1) .* 1e-5
+w_ub = ones(1) .* 1000.0
+# end manual.
+
+N_d = sum( length(Bs[n].d) + length(Bs[n].d_singlets) for n = 1:length(Bs) )
+
+st_ind = 1
+updatedfunc = pp->NMRCalibrate.updatemixtured!(Bs, pp, st_ind, fs, SW, Δ_shifts)
+
+st_ind_β = N_d + 1
+updateβfunc = pp->NMRCalibrate.updateβ!(Bs, pp, st_ind_β)
+#N_β = sum( sum(length(Bs[n].κs_β[l]) for l = 1:length(Bs[n].κs_β)) + length(Bs[n].β_singlets) for n = 1:length(Bs) )
+N_β = sum( NMRCalibrate.getNβ(Bs[n]) for n = 1:length(Bs) )
+NMRCalibrate.getNβ(Bs[1])
+
+N_vars = N_d + N_β
+A_BLS, w_BLS = NMRCalibrate.setupupdatew(length(U), length(Bs))
+
+# reference, zero shift, phase.
+p_test = zeros(N_vars) # reset.
+fill!(w_BLS, 1.0) # reset.
+
+updatedfunc(p_test)
+updateβfunc(p_test)
+
+q = uu->NMRSpectraSimulator.evalitpproxymixture(uu, Bs; w = w_BLS)
+q_U_ref = q.(U)
+
+
+# shift.
+p_test[1] = -1.0 # test.
+p_test[end] = -π
+updatedfunc(p_test)
+updateβfunc(p_test)
+
+##tmp = y[LS_inds]
+#tmp = q.(U) .* 5
+tmp = q.(U)
+U_LS = U
+b_BLS = [real.(tmp); imag.(tmp)]
+NMRCalibrate.updatew!(A_BLS, b_BLS, w_BLS, U_LS, Bs, w_lb, w_ub)
+
+
+q_U = q.(U)
+
+PyPlot.figure(fig_num)
+fig_num += 1
+
+PyPlot.plot(P, real.(q_U_ref), label = "reference")
+PyPlot.plot(P, real.(q_U), label = "shifted")
+
+PyPlot.legend()
+PyPlot.xlabel("ppm")
+PyPlot.ylabel("real")
+PyPlot.title("q")
