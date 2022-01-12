@@ -135,9 +135,7 @@ U = ppm2hzfunc.(P)
 ## parameters that affect qs.
 # A.d, A.κs_λ, A.κs_β
 # A.d_singlets, A.αs_singlets, A.Ωs_singlets, A.β_singlets, A.λ0, A.κs_λ_singlets
-
-As2 = collect( NMRSpectraSimulator.κCompoundFIDType(As[i]) for i = 1:length(As) )
-q = uu->NMRSpectraSimulator.evalitpproxymixture(uu, As2)
+q = uu->NMRSpectraSimulator.evalitpproxymixture(uu, mixture_params)
 
 f_U = f.(U)
 q_U = q.(U)
@@ -162,10 +160,6 @@ PyPlot.ylabel("real")
 PyPlot.title("data vs q")
 
 
-out = NMRCalibrate.viewaverageΔc(As[end])
-
-@assert 1==2
-
 ### I am here.  given U_cost_LS y_cost_LS locations, least squares z_k, per partition. fit global; no regions.
 # this will go into NMRCalibrate. dev here. LS_w_cL.jl in NMRMetaboliteProfiler.
 
@@ -185,10 +179,10 @@ st_ind_β = N_d + 1
 updateβfunc = pp->NMRCalibrate.updateβ!(Bs, pp, st_ind_β)
 #N_β = sum( sum(length(Bs[n].κs_β[l]) for l = 1:length(Bs[n].κs_β)) + length(Bs[n].β_singlets) for n = 1:length(Bs) )
 N_β = sum( NMRCalibrate.getNβ(Bs[n]) for n = 1:length(Bs) )
-N_parts = sum( NMRCalibrate.getNβ(Bs[i]) for i = 1:length(Bs) )
+NMRCalibrate.getNβ(Bs[1])
 
 N_vars = N_d + N_β
-A_BLS, κS_BLS = NMRCalibrate.setupupdatew(length(U), N_parts)
+A_BLS, w_BLS = NMRCalibrate.setupupdatew(length(U), length(Bs))
 
 # reference, zero shift, phase.
 p_test = zeros(N_vars) # reset.

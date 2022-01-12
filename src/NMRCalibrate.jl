@@ -1,11 +1,13 @@
 module NMRCalibrate
 
-import BSON
+
+import BSON, Statistics
 import NMRData, NMRDataSetup, NMRSpectraSimulator
 
 # https://github.com/nboyd/BoundedLeastSquares.jl
 import BoundedLeastSquares
 
+include("../src/types.jl")
 include("../src/utils.jl")
 
 include("../src/IO/synthetic_setup.jl")
