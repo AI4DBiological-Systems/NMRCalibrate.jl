@@ -2,7 +2,7 @@ function forcesymmetric(A::Matrix{T})::Matrix{T} where T <: Real
     return (A+A')./2
 end
 
-
+# average Δc vector for each partition element.
 function viewaverageΔc(A::NMRSpectraSimulator.CompoundFIDType{T}) where T
     
     N_spin_groups = length(A.part_inds_compound)
@@ -35,4 +35,60 @@ function viewaverageΔc(A::NMRSpectraSimulator.CompoundFIDType{T}) where T
     end
 
     return out
+end
+
+function countκ(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T}}) where T
+    
+    N_κ = 0
+    N_κ_singlets = 0
+    for n = 1:length(Es)
+        for i = 1:length(Es[n].κ)
+            #for l = 1:length(Es[n].κ[i])
+            N_κ += length(Es[n].κ[i])
+                
+            #end
+        end
+
+        N_κ_singlets += length(Es[n].κ_singlets)
+    end
+
+    return N_κ, N_κ_singlets
+end
+
+function parseκ!(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T}},
+    κ_vec::Vector{T}) where T
+
+    @assert length(κ_vec) == sum(countκ(Es))
+
+    j = 0
+    for n = 1:length(Es)
+        for i = 1:length(Es[n].κ)
+            for l = 1:length(Es[n].κ[i])
+                j += 1
+                Es[n].κ[i][l] = κ_vec[j]
+            end
+        end
+
+        for i = 1:length(Es[n].κ_singlets)
+            j += 1
+            Es[n].κ_singlets[i] = κ_vec[j]
+        end
+    end
+
+    return nothing
+end
+
+function resetκ!(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T}}) where T
+
+    j = 0
+    for n = 1:length(Es)
+        for i = 1:length(Es[n].κ)
+            for l = 1:length(Es[n].κ[i])
+                j += 1
+                Es[n].κ[i][l] = one(T)
+            end
+        end
+    end
+
+    return nothing
 end

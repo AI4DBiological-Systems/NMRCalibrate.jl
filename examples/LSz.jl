@@ -2,6 +2,8 @@
 
 import NMRDataSetup
 import NMRSpectraSimulator
+# include("/home/roy/Documents/repo/NMRSpectraSimulator/src/NMRSpectraSimulator.jl")
+# import .NMRSpectraSimulator
 
 include("../src/NMRCalibrate.jl")
 import .NMRCalibrate
@@ -132,12 +134,31 @@ f = uu->NMRSpectraSimulator.evalmixture(uu, mixture_params)
 P = LinRange(hz2ppmfunc(u_min), hz2ppmfunc(u_max), 50000)
 U = ppm2hzfunc.(P)
 
+
+###
+
+U_LS = U
+A_BLS, w_BLS = NMRCalibrate.setupupdatew(length(U_LS), length(As))
+fill!(w_BLS, 1.0)
+
+#@assert 1==2
+
 ## parameters that affect qs.
 # A.d, A.κs_λ, A.κs_β
 # A.d_singlets, A.αs_singlets, A.Ωs_singlets, A.β_singlets, A.λ0, A.κs_λ_singlets
 
 As2 = collect( NMRSpectraSimulator.κCompoundFIDType(As[i]) for i = 1:length(As) )
-q = uu->NMRSpectraSimulator.evalitpproxymixture(uu, As2)
+
+# sanity-check: purposely perturb κ.
+Ag = As2[end]
+#Ag.κ = collect( rand(length(Ag.κ[i])) for i = 1:length(Ag.κ) )
+#Ag.κ_singlets = rand(length(Ag.κ_singlets))
+Ag.κ[1][1] = 0.3
+Ag.κ[1][2] = 0.7
+Ag.κ[1][3] = 0.1
+Ag.κ_singlets[1] = 0.4
+
+q = uu->NMRSpectraSimulator.evalitpproxymixture(uu, As2; w = w_BLS)
 
 f_U = f.(U)
 q_U = q.(U)
@@ -147,6 +168,18 @@ max_val, ind = findmax(discrepancy)
 println("relative discrepancy = ", norm(discrepancy)/norm(f_U))
 println("max discrepancy: ", max_val)
 println()
+
+PyPlot.figure(fig_num)
+fig_num += 1
+
+PyPlot.plot(P, real.(f_U), label = "f")
+PyPlot.plot(P, real.(q_U), label = "q")
+
+PyPlot.legend()
+PyPlot.xlabel("ppm")
+PyPlot.ylabel("real")
+PyPlot.title("f vs q")
+
 
 ## visualize.
 PyPlot.figure(fig_num)
@@ -164,16 +197,19 @@ PyPlot.title("data vs q")
 
 out = NMRCalibrate.viewaverageΔc(As[end])
 
-@assert 1==2
+#@assert 1==2
 
 ### I am here.  given U_cost_LS y_cost_LS locations, least squares z_k, per partition. fit global; no regions.
 # this will go into NMRCalibrate. dev here. LS_w_cL.jl in NMRMetaboliteProfiler.
 
 # manual for now. DSS, last molecule.
 Bs = As[end:end]
-Δ_shifts = ones(2) .* 0.05
-w_lb = ones(1) .* 1e-5
-w_ub = ones(1) .* 1000.0
+# Bs[1].d
+# As2[end].core.d
+
+# Δ_shifts = ones(2) .* 0.05
+# w_lb = ones(1) .* 1e-5
+# w_ub = ones(1) .* 1000.0
 # end manual.
 
 N_d = sum( length(Bs[n].d) + length(Bs[n].d_singlets) for n = 1:length(Bs) )
@@ -185,45 +221,111 @@ st_ind_β = N_d + 1
 updateβfunc = pp->NMRCalibrate.updateβ!(Bs, pp, st_ind_β)
 #N_β = sum( sum(length(Bs[n].κs_β[l]) for l = 1:length(Bs[n].κs_β)) + length(Bs[n].β_singlets) for n = 1:length(Bs) )
 N_β = sum( NMRCalibrate.getNβ(Bs[n]) for n = 1:length(Bs) )
-N_parts = sum( NMRCalibrate.getNβ(Bs[i]) for i = 1:length(Bs) )
+
 
 N_vars = N_d + N_β
-A_BLS, κS_BLS = NMRCalibrate.setupupdatew(length(U), N_parts)
+
 
 # reference, zero shift, phase.
 p_test = zeros(N_vars) # reset.
-fill!(w_BLS, 1.0) # reset.
-
 updatedfunc(p_test)
 updateβfunc(p_test)
 
-q = uu->NMRSpectraSimulator.evalitpproxymixture(uu, Bs; w = w_BLS)
+#q = uu->NMRSpectraSimulator.evalitpproxymixture(uu, Bs; w = w_BLS)
+#q = uu->NMRSpectraSimulator.evalitpproxymixture(uu, Bs)
 q_U_ref = q.(U)
-
 
 # shift.
 p_test[1] = -1.0 # test.
+#p_test[end-1:end] .= -π
 p_test[end] = -π
 updatedfunc(p_test)
 updateβfunc(p_test)
-
-##tmp = y[LS_inds]
-#tmp = q.(U) .* 5
-tmp = q.(U)
-U_LS = U
-b_BLS = [real.(tmp); imag.(tmp)]
-NMRCalibrate.updatew!(A_BLS, b_BLS, w_BLS, U_LS, Bs, w_lb, w_ub)
-
 
 q_U = q.(U)
 
 PyPlot.figure(fig_num)
 fig_num += 1
 
-PyPlot.plot(P, real.(q_U_ref), label = "reference")
+PyPlot.plot(P, real.(q_U_ref), label = "reference q")
 PyPlot.plot(P, real.(q_U), label = "shifted")
 
 PyPlot.legend()
 PyPlot.xlabel("ppm")
 PyPlot.ylabel("real")
 PyPlot.title("q")
+
+p_test = zeros(N_vars) # reset.
+updatedfunc(p_test)
+updateβfunc(p_test)
+
+### w.
+# fill!(w_BLS, 1.0) # reset.
+# ##tmp = y[LS_inds]
+# tmp = q.(U) .* 5
+# #tmp = q.(U)
+# b_BLS = [real.(tmp); imag.(tmp)]
+# NMRCalibrate.updatew!(A_BLS, b_BLS, w_BLS, U_LS, Bs, w_lb, w_ub)
+
+### κ
+N_κ, N_κ_singlets = NMRCalibrate.countκ(As2)
+N_κ_vars = N_κ + N_κ_singlets
+E_BLS, κ_BLS = NMRCalibrate.setupupdatew(length(U_LS), N_κ_vars)
+
+κ_lb = ones(N_κ_vars) .* 0.2
+κ_ub = ones(N_κ_vars) .* 50.0
+fill!(κ_BLS, 12.0) # reset.
+
+NMRCalibrate.parseκ!(As2, κ_BLS)
+
+check_sys = collect( As2[i].κ for i = 1:length(As2) )
+check_singlets = collect( As2[i].κ_singlets for i = 1:length(As2) )
+# should be all 12's.
+
+# next, test LS.
+
+
+Ag = As2[end]
+#Ag.κ = collect( rand(length(Ag.κ[i])) for i = 1:length(Ag.κ) )
+#Ag.κ_singlets = rand(length(Ag.κ_singlets))
+Ag.κ[1][1] = 2.0
+Ag.κ[1][2] = 0.7
+Ag.κ[1][3] = 1.5
+Ag.κ_singlets[1] = 1.23
+q_oracle = q.(U)
+
+#q_oracle = q.(U) .* 1.23
+
+
+b_BLS = [real.(q_oracle); imag.(q_oracle)]
+NMRCalibrate.updateκ!(E_BLS, b_BLS, κ_BLS, U_LS, As2, κ_lb, κ_ub)
+
+#@assert 1==2
+
+q_U = q.(U)
+
+PyPlot.figure(fig_num)
+fig_num += 1
+
+PyPlot.plot(P, real.(q_oracle), label = "oracle q")
+PyPlot.plot(P, real.(q_U), label = "LS kappa")
+
+PyPlot.legend()
+PyPlot.xlabel("ppm")
+PyPlot.ylabel("real")
+PyPlot.title("estimating kappa")
+
+
+# PyPlot.figure(fig_num)
+# fig_num += 1
+
+# PyPlot.plot(P, real.(f_U), label = "f_U")
+# PyPlot.plot(P, real.(q_U), label = "shifted")
+
+# PyPlot.legend()
+# PyPlot.xlabel("ppm")
+# PyPlot.ylabel("real")
+# PyPlot.title("f vs. q")
+
+#### I think done. clean up this script.
+# next, fit the κ for mixtures, given some known w_BLS.

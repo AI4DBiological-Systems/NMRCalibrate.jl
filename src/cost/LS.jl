@@ -83,11 +83,11 @@ end
 
 function updateκ!(  A::Matrix{T},
     b::Vector{T},
-    w::Vector{T},
+    κ::Vector{T},
     U_LS,
-    Es::Vector{NMRSpectraSimulator.CompoundFIDType{T}},
-    w_lower::Vector{T},
-    w_upper::Vector{T}) where T <: Real
+    Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T}},
+    κ_lower::Vector{T},
+    κ_upper::Vector{T}) where T <: Real
 
     #@assert size(A) == (length(b), length(αS))
     @assert length(b) == 2*length(U_LS)
@@ -98,7 +98,7 @@ function updateκ!(  A::Matrix{T},
     # w[:] = NonNegLeastSquares.nonneg_lsq(A, b; alg = :fnnls)
     # status_flag = true
 
-    w[:], status_flag = solveBLScL(A, b, w_lower, w_upper)
+    κ[:], status_flag = solveBLScL(A, b, κ_lower, κ_upper)
 
     return status_flag
 end
@@ -106,20 +106,63 @@ end
 
 function evaldesignmatrixκ!(B::Matrix{T},
     U,
-    Es::Vector{NMRSpectraSimulator.CompoundFIDType{T}}) where T <: Real
+    Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T}}) where T <: Real
 
     #
     M = length(U)
     N = length(Es)
 
-    @assert size(B) == (2*M,N)
+    N_κ, N_κ_singlets = NMRCalibrate.countκ(Es)
+    #println((N_κ, N_κ_singlets))
+    #println(size(B))
+    @assert size(B) == (2*M, N_κ + N_κ_singlets)
 
+    resetκ!(Es)
+    j = 0
+
+    # loop over each κ partition element in Es.
     for n = 1:N
-        for m = 1:M
-            # speed up later.
-            tmp = NMRSpectraSimulator.evalitpproxycompound(U[m], Es[n])
-            B[m,n], B[m+M,n] = real(tmp), imag(tmp)
+        A = Es[n]
+        @assert length(A.κ) == length(A.core.qs) == length(A.core.κs_λ) == length(A.core.κs_β) == length(A.core.d)
+        
+         # spin system.
+        for i = 1:length(A.κ)
+            
+            # partition
+            for k = 1:length(A.κ[i])
+                
+                j += 1
+                
+                # loop over each fit position.
+                for m = 1:M
+
+                    # taken from evalitproxysys()
+                    r = 2*π*U[m] - A.core.d[i]
+                    out = A.core.qs[i][k](r, A.core.κs_λ[i], A.core.κs_β[i])
+
+                    #tmp = NMRSpectraSimulator.evalitpproxycompound(U[m], A)
+                    # tmp = one κ partition.
+
+                    B[m,j], B[m+M,j] = real(out), imag(out)
+                end
+            end
         end
+
+        # singlets.
+        for k = 1:length(A.κ_singlets)
+            j += 1
+
+            for m = 1:M
+
+                tmp = NMRSpectraSimulator.evalκsinglets(U[m], A.κ_singlets, A.core.d_singlets,
+                A.core.αs_singlets, A.core.Ωs_singlets,
+                A.core.β_singlets, A.core.λ0, A.core.κs_λ_singlets)
+
+                B[m,j] += real(tmp)
+                B[m+M,j] += imag(tmp)
+            end
+        end
+
     end
 
     return nothing
