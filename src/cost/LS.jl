@@ -117,7 +117,7 @@ function evaldesignmatrixκ!(B::Matrix{T},
     #println(size(B))
     @assert size(B) == (2*M, N_κ + N_κ_singlets)
 
-    resetκ!(Es)
+    #resetκ!(Es)
     j = 0
 
     # loop over each κ partition element in Es.
@@ -154,7 +154,7 @@ function evaldesignmatrixκ!(B::Matrix{T},
 
             for m = 1:M
 
-                tmp = NMRSpectraSimulator.evalκsinglets(U[m], A.κ_singlets, A.core.d_singlets,
+                tmp = NMRSpectraSimulator.evalκsinglets(U[m], A.core.d_singlets,
                 A.core.αs_singlets, A.core.Ωs_singlets,
                 A.core.β_singlets, A.core.λ0, A.core.κs_λ_singlets)
 

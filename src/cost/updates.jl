@@ -67,7 +67,99 @@ function getNβ(A::NMRSpectraSimulator.CompoundFIDType{T}) where T
         counter_sys += length(A.κs_β[i])
     end
 
-    N_β = counter_sys + length(A.β_singlets)
+    return counter_sys + length(A.β_singlets)
+end
 
-    return N_β
+function updateλ!(As::Vector{NMRSpectraSimulator.CompoundFIDType{T}},
+    p::Vector{T},
+    st_ind::Int)::Int where T <: Real
+
+    j = st_ind - 1
+
+    for n = 1:length(As)
+        for i = 1:length(As[n].κs_λ)
+
+            j += 1
+            As[n].κs_λ[i] = p[j]
+        end
+
+        for i = 1:length(As[n].κs_λ_singlets)
+
+            j += 1
+            As[n].κs_λ_singlets[i] = p[j]
+        end
+    end
+
+    return j
+end
+
+
+function getNλ(A::NMRSpectraSimulator.CompoundFIDType{T}) where T
+
+    counter_sys = 0
+    for i = 1:length(A.κs_λ)
+        counter_sys += length(A.κs_λ[i])
+    end
+
+    return counter_sys + length(A.κs_λ_singlets)
+end
+
+
+#### κ parsing.
+
+
+function countκ(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T}}) where T
+    
+    N_κ = 0
+    N_κ_singlets = 0
+    for n = 1:length(Es)
+        for i = 1:length(Es[n].κ)
+            #for l = 1:length(Es[n].κ[i])
+            N_κ += length(Es[n].κ[i])
+                
+            #end
+        end
+
+        N_κ_singlets += length(Es[n].κ_singlets)
+    end
+
+    return N_κ, N_κ_singlets
+end
+
+function parseκ!(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T}},
+    κ_vec::Vector{T}) where T
+
+    @assert length(κ_vec) == sum(countκ(Es))
+
+    j = 0
+    for n = 1:length(Es)
+        for i = 1:length(Es[n].κ)
+            for l = 1:length(Es[n].κ[i])
+                j += 1
+                Es[n].κ[i][l] = κ_vec[j]
+            end
+        end
+
+        for i = 1:length(Es[n].κ_singlets)
+            j += 1
+            Es[n].κ_singlets[i] = κ_vec[j]
+        end
+    end
+
+    return nothing
+end
+
+function resetκ!(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T}}) where T
+
+    j = 0
+    for n = 1:length(Es)
+        for i = 1:length(Es[n].κ)
+            for l = 1:length(Es[n].κ[i])
+                j += 1
+                Es[n].κ[i][l] = one(T)
+            end
+        end
+    end
+
+    return nothing
 end

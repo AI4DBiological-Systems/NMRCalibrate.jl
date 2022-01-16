@@ -37,58 +37,17 @@ function viewaverageΔc(A::NMRSpectraSimulator.CompoundFIDType{T}) where T
     return out
 end
 
-function countκ(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T}}) where T
+function findfreqrange(As::Vector{NMRSpectraSimulator.CompoundFIDType{T}}, hz2ppmfunc) where T
+
+    ΩS_ppm = Vector{Vector{T}}(undef, length(As))
     
-    N_κ = 0
-    N_κ_singlets = 0
-    for n = 1:length(Es)
-        for i = 1:length(Es[n].κ)
-            #for l = 1:length(Es[n].κ[i])
-            N_κ += length(Es[n].κ[i])
-                
-            #end
-        end
+    for (n,A) in enumerate(As)
 
-        N_κ_singlets += length(Es[n].κ_singlets)
+        ΩS_ppm[n] = hz2ppmfunc.( NMRSpectraSimulator.combinevectors(A.Ωs) ./ (2*π) )
+        
+        tmp = hz2ppmfunc.( A.Ωs_singlets ./ (2*π) )
+        push!(ΩS_ppm[n], tmp...)
     end
 
-    return N_κ, N_κ_singlets
-end
-
-function parseκ!(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T}},
-    κ_vec::Vector{T}) where T
-
-    @assert length(κ_vec) == sum(countκ(Es))
-
-    j = 0
-    for n = 1:length(Es)
-        for i = 1:length(Es[n].κ)
-            for l = 1:length(Es[n].κ[i])
-                j += 1
-                Es[n].κ[i][l] = κ_vec[j]
-            end
-        end
-
-        for i = 1:length(Es[n].κ_singlets)
-            j += 1
-            Es[n].κ_singlets[i] = κ_vec[j]
-        end
-    end
-
-    return nothing
-end
-
-function resetκ!(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T}}) where T
-
-    j = 0
-    for n = 1:length(Es)
-        for i = 1:length(Es[n].κ)
-            for l = 1:length(Es[n].κ[i])
-                j += 1
-                Es[n].κ[i][l] = one(T)
-            end
-        end
-    end
-
-    return nothing
+    return ΩS_ppm
 end

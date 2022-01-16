@@ -2,8 +2,6 @@
 
 import NMRDataSetup
 import NMRSpectraSimulator
-# include("/home/roy/Documents/repo/NMRSpectraSimulator/src/NMRSpectraSimulator.jl")
-# import .NMRSpectraSimulator
 
 include("../src/NMRCalibrate.jl")
 import .NMRCalibrate
@@ -100,9 +98,15 @@ mixture_params = NMRSpectraSimulator.setupmixtureproxies(molecule_names,
     α_relative_threshold = α_relative_threshold)
 As = mixture_params
 
+ΩS_ppm = NMRCalibrate.findfreqrange(As, hz2ppmfunc)
+ΩS_ppm_sorted = sort(NMRSpectraSimulator.combinevectors(ΩS_ppm))
 
-u_min = ppm2hzfunc(-0.5)
-u_max = ppm2hzfunc(3.0)
+# u_min = ppm2hzfunc(-0.5)
+# u_max = ppm2hzfunc(3.0)
+
+u_offset = 0.5
+u_min = ppm2hzfunc(ΩS_ppm_sorted[1] - u_offset)
+u_max = ppm2hzfunc(ΩS_ppm_sorted[end] + u_offset)
 
 NMRSpectraSimulator.fitproxies!(As;
     κ_λ_lb = κ_λ_lb,
@@ -134,14 +138,6 @@ w = ones(length(As))
 
 As2 = collect( NMRSpectraSimulator.κCompoundFIDType(As[i]) for i = 1:length(As) )
 
-Ag = As2[end]
-#Ag.κ = collect( rand(length(Ag.κ[i])) for i = 1:length(Ag.κ) )
-#Ag.κ_singlets = rand(length(Ag.κ_singlets))
-Ag.κ[1][1] = 0.3
-Ag.κ[1][2] = 0.7
-Ag.κ[1][3] = 0.1
-Ag.κ_singlets[1] = 0.4
-
 # assemble proxy and compare against oracle at locations in U.
 q = uu->NMRSpectraSimulator.evalitpproxymixture(uu, As2; w = w)
 
@@ -158,7 +154,7 @@ PyPlot.figure(fig_num)
 fig_num += 1
 
 PyPlot.plot(P, real.(f_U), label = "f")
-PyPlot.plot(P, real.(q_U), label = "q")
+PyPlot.plot(P, real.(q_U), "--", label = "q")
 
 PyPlot.legend()
 PyPlot.xlabel("ppm")
@@ -167,81 +163,6 @@ PyPlot.title("f vs q")
 
 # view the average Δc vector for each partition for DSS (last compound).
 average_Δc_vectors_DSS = NMRCalibrate.viewaverageΔc(As[end])
-
-############## test the shifting, β, and λ of DSS.
-
-# manual for now. DSS, last molecule.
-Bs = As[end:end]
-# Bs[1].d
-# As2[end].core.d
-
-N_shifts = sum( length(Bs[n].d) + length(Bs[n].d_singlets) for n = 1:length(Bs) )
-Δ_shifts = ones(N_shifts) .* 0.05
-# w_lb = ones(1) .* 1e-5
-# w_ub = ones(1) .* 1000.0
-# end manual.
-
-N_d = sum( length(Bs[n].d) + length(Bs[n].d_singlets) for n = 1:length(Bs) )
-
-st_ind = 1
-updatedfunc = pp->NMRCalibrate.updatemixtured!(Bs, pp, st_ind, fs, SW, Δ_shifts)
-
-st_ind_β = N_d + 1
-updateβfunc = pp->NMRCalibrate.updateβ!(Bs, pp, st_ind_β)
-#N_β = sum( sum(length(Bs[n].κs_β[l]) for l = 1:length(Bs[n].κs_β)) + length(Bs[n].β_singlets) for n = 1:length(Bs) )
-N_β = sum( NMRCalibrate.getNβ(Bs[n]) for n = 1:length(Bs) )
-
-# I am here. do λupdate.
-st_ind_λ = st_ind_β + N_β
-updateλfunc = pp->NMRCalibrate.updateλ!(Bs, pp, st_ind_λ)
-N_λ = sum( NMRCalibrate.getNλ(Bs[n]) for n = 1:length(Bs) )
-
-N_vars = N_d + N_β + N_λ
-
-
-# reference, zero shift, phase.
-p_test = zeros(N_vars)
-p_test[1:st_ind_β-1] .= 0.0
-p_test[st_ind_β:st_ind_λ-1] .= 0.0
-p_test[st_ind_λ:end] .= 1.0
-updatedfunc(p_test)
-updateβfunc(p_test)
-updateλfunc(p_test)
-
-#q = uu->NMRSpectraSimulator.evalitpproxymixture(uu, Bs; w = w)
-#q = uu->NMRSpectraSimulator.evalitpproxymixture(uu, Bs)
-q_U_ref = q.(U)
-
-# shift.
-p_test[1] = -1.0 # this is the spin group for DSS' small peaks.
-#p_test[end-1:end] .= -π
-p_test[st_ind_λ-1] = -π # this entry affects the phase for DSS' main peak.
-p_test[end] = 2.0
-updatedfunc(p_test)
-updateβfunc(p_test)
-updateλfunc(p_test)
-
-q_U = q.(U)
-
-PyPlot.figure(fig_num)
-fig_num += 1
-
-PyPlot.plot(P, real.(q_U_ref), label = "reference q")
-PyPlot.plot(P, real.(q_U), label = "shifted")
-
-PyPlot.legend()
-PyPlot.xlabel("ppm")
-PyPlot.ylabel("real")
-PyPlot.title("q")
-
-
-# reset shifts and phases.
-p_test[1:st_ind_β-1] .= 0.0
-p_test[st_ind_β:st_ind_λ-1] .= 0.0
-p_test[st_ind_λ:end] .= 1.0
-updatedfunc(p_test)
-updateβfunc(p_test)
-updateλfunc(p_test)
 
 
 
@@ -282,7 +203,7 @@ PyPlot.figure(fig_num)
 fig_num += 1
 
 PyPlot.plot(P, real.(q_oracle), label = "oracle q")
-PyPlot.plot(P, real.(q_U), label = "LS kappa")
+PyPlot.plot(P, real.(q_U), "--", label = "LS kappa")
 
 PyPlot.legend()
 PyPlot.xlabel("ppm")
