@@ -1,7 +1,7 @@
 module NMRCalibrate
 
-import Statistics
-import BSON, Statistics/home/roy/MEGAsync/inputs/NMR/configs
+
+import BSON, Statistics
 import NMRData, NMRDataSetup, NMRSpectraSimulator
 
 # https://github.com/nboyd/BoundedLeastSquares.jl
