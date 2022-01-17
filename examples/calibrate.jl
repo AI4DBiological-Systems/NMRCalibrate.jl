@@ -71,7 +71,7 @@ y = DFT_s[U_inds] ./ Z
 
 
 #
-S_U = DFT_s[U_inds] 
+S_U = DFT_s[U_inds]
 P_y = hz2ppmfunc.(U_y)
 
 PyPlot.figure(fig_num)
@@ -160,6 +160,18 @@ PyPlot.legend()
 PyPlot.xlabel("ppm")
 PyPlot.ylabel("real")
 PyPlot.title("f vs q")
+
+cs_config_path = "/home/roy/MEGAsync/inputs/NMR/configs/cs_config_reduced.txt"
+
+cs_delta_group = extractinfofromconfig( cs_config_path, molecule_names)
+
+@assert 1==2
+
+Δ_shifts = ones(N_shifts) .* 0.05
+exp_info = setupexperimentresults(molecule_names, ΩS0_ppm, Δsys_border;
+    min_dist = 0.1)
+
+@assert 1==2
 
 # view the average Δc vector for each partition for DSS (last compound).
 average_Δc_vectors_DSS = NMRCalibrate.viewaverageΔc(As[end])

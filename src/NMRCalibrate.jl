@@ -1,7 +1,7 @@
 module NMRCalibrate
 
-
-import BSON, Statistics
+import Statistics
+import BSON, Statistics/home/roy/MEGAsync/inputs/NMR/configs
 import NMRData, NMRDataSetup, NMRSpectraSimulator
 
 # https://github.com/nboyd/BoundedLeastSquares.jl
@@ -15,7 +15,9 @@ include("../src/IO/synthetic_setup.jl")
 include("../src/DSP/dsp.jl")
 
 include("../src/cost/LS.jl")
+#include("../src/cost/prep.jl")
 include("../src/cost/updates.jl")
+
 
 
 export getwraparoundDFTfreqs
