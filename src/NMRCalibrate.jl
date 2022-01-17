@@ -4,6 +4,9 @@ module NMRCalibrate
 import BSON, Statistics
 import NMRData, NMRDataSetup, NMRSpectraSimulator
 
+# https://github.com/AI4DBiological-Systems/NMRSpecifyRegions
+import NMRSpecifyRegions
+
 # https://github.com/nboyd/BoundedLeastSquares.jl
 import BoundedLeastSquares
 

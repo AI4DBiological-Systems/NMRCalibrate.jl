@@ -2,17 +2,16 @@
 
 import NMRDataSetup
 import NMRSpectraSimulator
+import NMRCalibrate
 
-include("../src/NMRCalibrate.jl")
-import .NMRCalibrate
+# include("../src/NMRSpecifyRegions.jl")
+# import .NMRSpecifyRegions
+import NMRSpecifyRegions
 
 using LinearAlgebra
 using FFTW
 import PyPlot
 import BSON
-#import JLD
-
-#import Clustering
 import Statistics
 
 PyPlot.close("all")
@@ -77,12 +76,12 @@ P_y = hz2ppmfunc.(U_y)
 PyPlot.figure(fig_num)
 fig_num += 1
 
-PyPlot.plot(P_y, real.(S_U), label = "data spectrum")
+PyPlot.plot(P_y, real.(y), label = "data spectrum, y")
 
 PyPlot.legend()
 PyPlot.xlabel("ppm")
 PyPlot.ylabel("real")
-PyPlot.title("data spectra")
+PyPlot.title("data spectra, real part")
 
 
 
@@ -97,6 +96,7 @@ mixture_params = NMRSpectraSimulator.setupmixtureproxies(molecule_names,
     tol_coherence = tol_coherence,
     α_relative_threshold = α_relative_threshold)
 As = mixture_params
+
 
 ΩS_ppm = NMRCalibrate.findfreqrange(As, hz2ppmfunc)
 ΩS_ppm_sorted = sort(NMRSpectraSimulator.combinevectors(ΩS_ppm))
@@ -124,103 +124,55 @@ U = ppm2hzfunc.(P)
 #ΩS_ppm = collect( hz2ppmfunc.( NMRSpectraSimulator.combinevectors(A.Ωs) ./ (2*π) ) for A in mixture_params )
 
 
-# lorentzian (oracle/ground truth)
-f = uu->NMRSpectraSimulator.evalmixture(uu, mixture_params)
-
-U_LS = U
-w = ones(length(As))
 
 
-## parameters that affect qs.
-# A.d, A.κs_λ, A.κs_β
-# A.d_singlets, A.αs_singlets, A.Ωs_singlets, A.β_singlets, A.λ0, A.κs_λ_singlets
-# purposely perturb κ.
 
-As2 = collect( NMRSpectraSimulator.κCompoundFIDType(As[i]) for i = 1:length(As) )
-
-# assemble proxy and compare against oracle at locations in U.
-q = uu->NMRSpectraSimulator.evalitpproxymixture(uu, As2; w = w)
-
-f_U = f.(U)
-q_U = q.(U)
-
-discrepancy = abs.(f_U-q_U)
-max_val, ind = findmax(discrepancy)
-println("relative discrepancy = ", norm(discrepancy)/norm(f_U))
-println("max discrepancy: ", max_val)
-println()
-
-PyPlot.figure(fig_num)
-fig_num += 1
-
-PyPlot.plot(P, real.(f_U), label = "f")
-PyPlot.plot(P, real.(q_U), "--", label = "q")
-
-PyPlot.legend()
-PyPlot.xlabel("ppm")
-PyPlot.ylabel("real")
-PyPlot.title("f vs q")
 
 cs_config_path = "/home/roy/MEGAsync/inputs/NMR/configs/cs_config_reduced.txt"
 
-cs_delta_group = extractinfofromconfig( cs_config_path, molecule_names)
+cs_delta_group = NMRSpecifyRegions.extractinfofromconfig( cs_config_path, molecule_names)
+Δsys_cs = NMRSpecifyRegions.condenseΔcsconfig(cs_delta_group)
 
-@assert 1==2
-
-Δ_shifts = ones(N_shifts) .* 0.05
-exp_info = setupexperimentresults(molecule_names, ΩS0_ppm, Δsys_border;
-    min_dist = 0.1)
-
-# TODO, figure out private registry.
-# TODO, get the positions in del.jl to here. then proceed to prep optim.
-
-@assert 1==2
-
-# view the average Δc vector for each partition for DSS (last compound).
-average_Δc_vectors_DSS = NMRCalibrate.viewaverageΔc(As[end])
+ΩS0 = NMRSpecifyRegions.getΩS(As)
+ΩS0_ppm = NMRSpecifyRegions.getPs(ΩS0, hz2ppmfunc)
+exp_info = NMRSpecifyRegions.setupexperimentresults(molecule_names, ΩS0_ppm, Δsys_cs;
+min_dist = 0.1)
 
 
 
-####### perturb κ
-N_κ, N_κ_singlets = NMRCalibrate.countκ(As2)
-N_κ_vars = N_κ + N_κ_singlets
-E_BLS, κ_BLS = NMRCalibrate.setupupdatew(length(U_LS), N_κ_vars)
+function testfunc(exp_info, P_cost0)
 
-κ_lb = ones(N_κ_vars) .* 0.2
-κ_ub = ones(N_κ_vars) .* 50.0
-fill!(κ_BLS, 12.0) # reset.
+    band_inds = Vector{Int}(undef, 0)
 
-# update As2 with κ_BLS.
-NMRCalibrate.parseκ!(As2, κ_BLS)
+    for i = 1:length(exp_info.regions)
 
-check_sys = collect( As2[i].κ for i = 1:length(As2) )
-check_singlets = collect( As2[i].κ_singlets for i = 1:length(As2) )
-# should be all 12's.
+        tmp = NMRSpecifyRegions.filterfreqpositions(P_cost0, [exp_info.regions[i].st;], [exp_info.regions[i].fin;])
+        push!(band_inds, tmp...)
+    end
 
-Ag = As2[end]
-#Ag.κ = collect( rand(length(Ag.κ[i])) for i = 1:length(Ag.κ) )
-#Ag.κ_singlets = rand(length(Ag.κ_singlets))
-Ag.κ[1][1] = 2.0
-Ag.κ[1][2] = 0.7
-Ag.κ[1][3] = 1.5
-Ag.κ_singlets[1] = 1.23
-q_oracle = q.(U)
+    unique!(band_inds)
+    return band_inds
+end
 
-# least square solve on κ.
-b_BLS = [real.(q_oracle); imag.(q_oracle)]
-NMRCalibrate.updateκ!(E_BLS, b_BLS, κ_BLS, U_LS, As2, κ_lb, κ_ub)
+U_cost0 = U_y
+P_cost0 = hz2ppmfunc.(U_cost0)
+y_cost0 = y
 
+band_inds = testfunc(exp_info, P_cost0)
 
-# visualize.
-q_U = q.(U)
+U_cost = U_cost0[band_inds]
+P_cost = P_cost0[band_inds]
+
+y_cost = y_cost0[band_inds]
+
 
 PyPlot.figure(fig_num)
 fig_num += 1
 
-PyPlot.plot(P, real.(q_oracle), label = "oracle q")
-PyPlot.plot(P, real.(q_U), "--", label = "LS kappa")
+PyPlot.plot(P_y, real.(y), label = "data spectrum")
+PyPlot.plot(P_cost, real.(y_cost), "^", label = "positions")
 
 PyPlot.legend()
 PyPlot.xlabel("ppm")
 PyPlot.ylabel("real")
-PyPlot.title("estimating kappa")
+PyPlot.title("positions against data spectrum, real part")
