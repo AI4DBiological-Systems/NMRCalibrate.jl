@@ -2,6 +2,7 @@
 
 import NMRDataSetup
 import NMRSpectraSimulator
+import NMRSpecifyRegions
 
 include("../src/NMRCalibrate.jl")
 import .NMRCalibrate
@@ -161,15 +162,49 @@ PyPlot.xlabel("ppm")
 PyPlot.ylabel("real")
 PyPlot.title("f vs q")
 
+####################
+
+
+
+
 cs_config_path = "/home/roy/MEGAsync/inputs/NMR/configs/cs_config_reduced.txt"
 
-cs_delta_group = extractinfofromconfig( cs_config_path, molecule_names)
+cs_delta_group = NMRSpecifyRegions.extractinfofromconfig( cs_config_path, molecule_names)
+Δsys_cs = NMRSpecifyRegions.condenseΔcsconfig(cs_delta_group)
 
-@assert 1==2
+ΩS0 = NMRSpecifyRegions.getΩS(As)
+ΩS0_ppm = NMRSpecifyRegions.getPs(ΩS0, hz2ppmfunc)
+exp_info = NMRSpecifyRegions.setupexperimentresults(molecule_names, ΩS0_ppm, Δsys_cs;
+min_dist = 0.1)
 
-Δ_shifts = ones(N_shifts) .* 0.05
-exp_info = setupexperimentresults(molecule_names, ΩS0_ppm, Δsys_border;
-    min_dist = 0.1)
+U_cost0 = U_y
+P_cost0 = hz2ppmfunc.(U_cost0)
+y_cost0 = y
+
+
+band_inds = NMRSpecifyRegions.getcostinds(exp_info, P_cost0)
+
+U_cost = U_cost0[band_inds]
+P_cost = P_cost0[band_inds]
+
+y_cost = y_cost0[band_inds]
+
+
+PyPlot.figure(fig_num)
+fig_num += 1
+
+PyPlot.plot(P_y, real.(y), label = "data spectrum")
+PyPlot.plot(P_cost, real.(y_cost), "^", label = "positions")
+
+PyPlot.legend()
+PyPlot.xlabel("ppm")
+PyPlot.ylabel("real")
+PyPlot.title("positions against data spectrum, real part")
+
+
+
+Δ_shifts = NMRSpectraSimulator.combinevectors(Δsys_cs)
+
 
 # TODO, figure out private registry.
 # TODO, get the positions in del.jl to here. then proceed to prep optim.
