@@ -243,6 +243,15 @@ updatedfunc(p_test)
 updateβfunc(p_test)
 updateλfunc(p_test)
 
+# reset κ.
+Ag = As2[end]
+#Ag.κ = collect( rand(length(Ag.κ[i])) for i = 1:length(Ag.κ) )
+#Ag.κ_singlets = rand(length(Ag.κ_singlets))
+Ag.κ[1][1] = 1.0
+Ag.κ[1][2] = 1.0
+Ag.κ[1][3] = 1.0
+Ag.κ_singlets[1] = 1.0
+q_U_ref = q.(U)
 
 
 ####### perturb κ
@@ -282,7 +291,8 @@ PyPlot.figure(fig_num)
 fig_num += 1
 
 PyPlot.plot(P, real.(q_oracle), label = "oracle q")
-PyPlot.plot(P, real.(q_U), label = "LS kappa")
+PyPlot.plot(P, real.(q_U), "--", label = "LS kappa")
+PyPlot.plot(P, real.(q_U_ref), "x", label = "reference q")
 
 PyPlot.legend()
 PyPlot.xlabel("ppm")

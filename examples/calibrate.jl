@@ -163,31 +163,14 @@ PyPlot.ylabel("real")
 PyPlot.title("f vs q")
 
 ####################
-
-
+combinevectors = NMRSpectraSimulator.combinevectors
 
 
 cs_config_path = "/home/roy/MEGAsync/inputs/NMR/configs/cs_config_reduced.txt"
 
-cs_delta_group = NMRSpecifyRegions.extractinfofromconfig( cs_config_path, molecule_names)
-Δsys_cs = NMRSpecifyRegions.condenseΔcsconfig(cs_delta_group)
-
-ΩS0 = NMRSpecifyRegions.getΩS(As)
-ΩS0_ppm = NMRSpecifyRegions.getPs(ΩS0, hz2ppmfunc)
-exp_info = NMRSpecifyRegions.setupexperimentresults(molecule_names, ΩS0_ppm, Δsys_cs;
-min_dist = 0.1)
-
-U_cost0 = U_y
-P_cost0 = hz2ppmfunc.(U_cost0)
-y_cost0 = y
-
-
-band_inds = NMRSpecifyRegions.getcostinds(exp_info, P_cost0)
-
-U_cost = U_cost0[band_inds]
-P_cost = P_cost0[band_inds]
-
-y_cost = y_cost0[band_inds]
+Δsys_cs, y_cost, U_cost, P_cost, exp_info,
+cost_inds = NMRCalibrate.prepareoptim(cs_config_path, molecule_names, hz2ppmfunc,
+U_y, y, As; region_min_dist = 0.1)
 
 
 PyPlot.figure(fig_num)
@@ -201,15 +184,10 @@ PyPlot.xlabel("ppm")
 PyPlot.ylabel("real")
 PyPlot.title("positions against data spectrum, real part")
 
-
-
 Δ_shifts = NMRSpectraSimulator.combinevectors(Δsys_cs)
 
+@assert 5==4
 
-# TODO, figure out private registry.
-# TODO, get the positions in del.jl to here. then proceed to prep optim.
-
-@assert 1==2
 
 # view the average Δc vector for each partition for DSS (last compound).
 average_Δc_vectors_DSS = NMRCalibrate.viewaverageΔc(As[end])
@@ -259,3 +237,9 @@ PyPlot.legend()
 PyPlot.xlabel("ppm")
 PyPlot.ylabel("real")
 PyPlot.title("estimating kappa")
+
+
+
+
+# TODO, figure out private registry.
+# TODO, get the positions in del.jl to here. then proceed to prep optim.

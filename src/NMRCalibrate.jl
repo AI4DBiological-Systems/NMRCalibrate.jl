@@ -18,7 +18,7 @@ include("../src/IO/synthetic_setup.jl")
 include("../src/DSP/dsp.jl")
 
 include("../src/cost/LS.jl")
-#include("../src/cost/prep.jl")
+include("../src/cost/prep.jl")
 include("../src/cost/updates.jl")
 
 
