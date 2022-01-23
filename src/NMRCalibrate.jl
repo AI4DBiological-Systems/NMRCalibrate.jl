@@ -1,6 +1,11 @@
 module NMRCalibrate
 
+# remove later.
+import JLD
+# end remove.
 
+using LinearAlgebra
+import NLopt
 import BSON, Statistics
 import NMRData, NMRDataSetup, NMRSpectraSimulator
 

@@ -191,7 +191,7 @@ updateβfunc = pp->NMRCalibrate.updateβ!(Bs, pp, st_ind_β)
 #N_β = sum( sum(length(Bs[n].κs_β[l]) for l = 1:length(Bs[n].κs_β)) + length(Bs[n].β_singlets) for n = 1:length(Bs) )
 N_β = sum( NMRCalibrate.getNβ(Bs[n]) for n = 1:length(Bs) )
 
-# I am here. do λupdate.
+# λupdate.
 st_ind_λ = st_ind_β + N_β
 updateλfunc = pp->NMRCalibrate.updateλ!(Bs, pp, st_ind_λ)
 N_λ = sum( NMRCalibrate.getNλ(Bs[n]) for n = 1:length(Bs) )

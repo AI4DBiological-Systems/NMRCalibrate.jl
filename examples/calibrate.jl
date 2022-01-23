@@ -11,14 +11,16 @@ using LinearAlgebra
 using FFTW
 import PyPlot
 import BSON
-#import JLD
+import JLD
 
 #import Clustering
 import Statistics
+import Random
 
 PyPlot.close("all")
 fig_num = 1
 
+Random.seed!(25)
 PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "serif"])
 
 ### user inputs.
@@ -31,19 +33,21 @@ projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/"
 project_name = "phenylalanine-700"
 molecule_names = ["L-Phenylalanine"; "DSS"]
 w = [20/0.5; 1.0] # BMRB-700 phenylalanine: DSS is 500 micro M.
+w = w ./ norm(w)
 
 # path to the GISSMO Julia storage folder.
 base_path_JLD = "/home/roy/Documents/data/NMR/NMRData/src/input/molecules"
 
 # proxy-related.
 tol_coherence = 1e-2
-α_relative_threshold = 0.05
+α_relative_threshold = 0.05 
 λ0 = 3.4
 Δcs_max = 0.2
 κ_λ_lb = 0.5
 κ_λ_ub = 2.5
 
 ### end inputs.
+
 
 
 ## load data.
@@ -117,8 +121,34 @@ NMRSpectraSimulator.fitproxies!(As;
     Δr = 1.0,
     Δκ_λ = 0.05)
 
+### cost func.
+combinevectors = NMRSpectraSimulator.combinevectors
 
-### plot.
+cs_config_path = "/home/roy/MEGAsync/inputs/NMR/configs/cs_config_reduced.txt"
+
+Δsys_cs, y_cost_all, U_cost_all, P_cost_all, exp_info, cost_inds,
+cost_inds_set = NMRCalibrate.prepareoptim(cs_config_path, molecule_names, hz2ppmfunc,
+U_y, y, As; region_min_dist = 0.1)
+
+r = 1
+y_cost = y[cost_inds_set[r]]
+U_cost = U_y[cost_inds_set[r]]
+P_cost = P_y[cost_inds_set[r]]
+
+PyPlot.figure(fig_num)
+fig_num += 1
+
+PyPlot.plot(P_y, real.(y), label = "data spectrum")
+PyPlot.plot(P_cost, real.(y_cost), "^", label = "positions")
+
+PyPlot.legend()
+PyPlot.xlabel("ppm")
+PyPlot.ylabel("real")
+PyPlot.title("positions against data spectrum, real part")
+
+Δ_shifts = NMRSpectraSimulator.combinevectors(Δsys_cs)
+
+##### set up updates.
 
 P = LinRange(hz2ppmfunc(u_min), hz2ppmfunc(u_max), 50000)
 U = ppm2hzfunc.(P)
@@ -129,8 +159,6 @@ U = ppm2hzfunc.(P)
 f = uu->NMRSpectraSimulator.evalmixture(uu, mixture_params)
 
 U_LS = U
-w = ones(length(As))
-
 
 ## parameters that affect qs.
 # A.d, A.κs_λ, A.κs_β
@@ -140,7 +168,26 @@ w = ones(length(As))
 As2 = collect( NMRSpectraSimulator.κCompoundFIDType(As[i]) for i = 1:length(As) )
 
 # assemble proxy and compare against oracle at locations in U.
-q = uu->NMRSpectraSimulator.evalitpproxymixture(uu, As2; w = w)
+#w = ones(length(As))
+#q = uu->NMRSpectraSimulator.evalitpproxymixture(uu, As2; w = w)
+Es = As2
+#w = ones(length(Es))
+LS_inds = 1:length(U_cost)
+max_iters = 5000
+
+q, updatedfunc, updateβfunc, updateλfunc, updateκfunc,
+κ_BLS, getshiftfunc, getβfunc, getλfunc,
+N_vars_set = NMRCalibrate.setupcostcLshiftLS(Es, As, fs, SW,
+    LS_inds, U_cost, y_cost, Δ_shifts;
+    w = w, κ_lb_default = 0.2, κ_ub_default = 5.0)
+
+N_d, N_β, N_λ = N_vars_set
+p_initial = [zeros(N_d); zeros(N_β); ones(N_λ)]
+
+#updateκfunc(p_initial)
+fill!(κ_BLS, 1.0)
+
+### plot.
 
 f_U = f.(U)
 q_U = q.(U)
@@ -162,66 +209,90 @@ PyPlot.xlabel("ppm")
 PyPlot.ylabel("real")
 PyPlot.title("f vs q")
 
-####################
-combinevectors = NMRSpectraSimulator.combinevectors
+# TODO I am here. suspected memory leak? sometimes lapack error.
+# switch back to BLS, and print first few iters, all p's.
+
+# p2 = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0]
+# updatedfunc(p2)
+# updateβfunc(p2)
+# updateλfunc(p2)
+# updateκfunc(p2)
 
 
-cs_config_path = "/home/roy/MEGAsync/inputs/NMR/configs/cs_config_reduced.txt"
+# @assert 1==2
 
-Δsys_cs, y_cost, U_cost, P_cost, exp_info,
-cost_inds = NMRCalibrate.prepareoptim(cs_config_path, molecule_names, hz2ppmfunc,
-U_y, y, As; region_min_dist = 0.1)
+p_star, q, κ_BLS, getshiftfunc, getβfunc, getλfunc,
+obj_func, N_vars_set = NMRCalibrate.runalignment(Δ_shifts,
+U_cost, y_cost, LS_inds, Es, As, fs, SW;
+max_iters = 5000,
+xtol_rel = 1e-7,
+ftol_rel = 1e-12,
+w = w,
+κ_lb_default = 0.2,
+κ_ub_default = 50.0,
+λ_each_lb = 0.9,
+λ_each_ub = 1.1)
+
+d_star = getshiftfunc(p_star)
+β_star = getβfunc(p_star)
+λ_star = getλfunc(p_star)
+println("d_star = ", d_star)
+println("β_star = ", β_star)
+println("λ_star = ", λ_star)
+println("κ_BLS = ", κ_BLS)
+println()
+
+### reference.
+
+# reference, zero shift, phase.
+p_test = zeros(sum(N_vars_set))
+initial_cost = obj_func(p_test)
+q_initial_U = q.(U)
+
+p_test = copy(p_star)
+final_cost = obj_func(p_test)
+q_final_U = q.(U)
 
 
 PyPlot.figure(fig_num)
 fig_num += 1
 
-PyPlot.plot(P_y, real.(y), label = "data spectrum")
-PyPlot.plot(P_cost, real.(y_cost), "^", label = "positions")
+
+PyPlot.plot(P_y, real.(y), label = "y")
+PyPlot.plot(P_cost, real.(y_cost), "x")
 
 PyPlot.legend()
 PyPlot.xlabel("ppm")
 PyPlot.ylabel("real")
-PyPlot.title("positions against data spectrum, real part")
+PyPlot.title("cost vs. fit")
 
-Δ_shifts = NMRSpectraSimulator.combinevectors(Δsys_cs)
 
-@assert 5==4
+PyPlot.figure(fig_num)
+fig_num += 1
 
+PyPlot.plot(P, real.(q_initial_U), label = "q initial")
+PyPlot.plot(P_y, real.(y), label = "y")
+PyPlot.plot(P, real.(q_final_U), "--", label = "q final")
+#PyPlot.plot(P_cost, real.(y_cost), "x")
+
+PyPlot.legend()
+PyPlot.xlabel("ppm")
+PyPlot.ylabel("real")
+PyPlot.title("cost vs. fit")
+
+
+### debug.
+debug_dict = JLD.load("debug.jld")
+B = debug_dict["B"]
+
+@assert 1==23
+
+
+
+####################
 
 # view the average Δc vector for each partition for DSS (last compound).
 average_Δc_vectors_DSS = NMRCalibrate.viewaverageΔc(As[end])
-
-
-
-####### perturb κ
-N_κ, N_κ_singlets = NMRCalibrate.countκ(As2)
-N_κ_vars = N_κ + N_κ_singlets
-E_BLS, κ_BLS = NMRCalibrate.setupupdatew(length(U_LS), N_κ_vars)
-
-κ_lb = ones(N_κ_vars) .* 0.2
-κ_ub = ones(N_κ_vars) .* 50.0
-fill!(κ_BLS, 12.0) # reset.
-
-# update As2 with κ_BLS.
-NMRCalibrate.parseκ!(As2, κ_BLS)
-
-check_sys = collect( As2[i].κ for i = 1:length(As2) )
-check_singlets = collect( As2[i].κ_singlets for i = 1:length(As2) )
-# should be all 12's.
-
-Ag = As2[end]
-#Ag.κ = collect( rand(length(Ag.κ[i])) for i = 1:length(Ag.κ) )
-#Ag.κ_singlets = rand(length(Ag.κ_singlets))
-Ag.κ[1][1] = 2.0
-Ag.κ[1][2] = 0.7
-Ag.κ[1][3] = 1.5
-Ag.κ_singlets[1] = 1.23
-q_oracle = q.(U)
-
-# least square solve on κ.
-b_BLS = [real.(q_oracle); imag.(q_oracle)]
-NMRCalibrate.updateκ!(E_BLS, b_BLS, κ_BLS, U_LS, As2, κ_lb, κ_ub)
 
 
 # visualize.

@@ -160,8 +160,6 @@ PyPlot.ylabel("real")
 PyPlot.title("data vs q")
 
 
-### I am here.  given U_cost_LS y_cost_LS locations, least squares z_k, per partition. fit global; no regions.
-# this will go into NMRCalibrate. dev here. LS_w_cL.jl in NMRMetaboliteProfiler.
 
 # manual for now. DSS, last molecule.
 Bs = As[end:end]

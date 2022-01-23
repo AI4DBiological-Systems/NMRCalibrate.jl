@@ -2,6 +2,7 @@
 
 # just use the real part for LS.
 #yr, yi assumed to have LS_inds applied already.
+# This does A\b but with bounds.
 function solveBLScL( A,
     b,
     x_lower::Vector{T},
@@ -67,6 +68,8 @@ function evaldesignmatrixw!(B::Matrix{T},
 
     @assert size(B) == (2*M,N)
 
+    fill!(B, NaN) # debug.
+
     for n = 1:N
         for m = 1:M
             # speed up later.
@@ -98,7 +101,20 @@ function updateκ!(  A::Matrix{T},
     # w[:] = NonNegLeastSquares.nonneg_lsq(A, b; alg = :fnnls)
     # status_flag = true
 
+    if !all(isfinite.(A))
+        println("A is not finite")
+        
+        JLD.save("debug2.jld", "A", A, "b", b)
+
+        # f = jldopen(filename, "r+")
+        # write(f, "A", A, "b", b)
+        # close(f)
+    end
+
     κ[:], status_flag = solveBLScL(A, b, κ_lower, κ_upper)
+    # κ[:] = A\b
+    # clamp!(κ, κ_lower[1], κ_upper[1])
+    # status_flag = true
 
     return status_flag
 end
@@ -116,6 +132,7 @@ function evaldesignmatrixκ!(B::Matrix{T},
     #println((N_κ, N_κ_singlets))
     #println(size(B))
     @assert size(B) == (2*M, N_κ + N_κ_singlets)
+    fill!(B, NaN) # debug.
 
     #resetκ!(Es)
     j = 0
@@ -142,6 +159,20 @@ function evaldesignmatrixκ!(B::Matrix{T},
 
                     #tmp = NMRSpectraSimulator.evalitpproxycompound(U[m], A)
                     # tmp = one κ partition.
+                    
+                    if !isfinite(out)
+                        println("eval not finite!")
+                        println("U[m] = ", U[m])
+
+                        println("n,ik,m = ", (n,i,k,m))
+                        println("Es[n].core.d = ", Es[n].core.d)
+                        println("Es[n].core.κs_λ = ", Es[n].core.κs_λ)
+                        println("Es[n].core.κs_β = ", Es[n].core.κs_β)
+
+                        println("Es[n].κ = ", Es[n].κ)
+                        println()
+        
+                    end
 
                     B[m,j], B[m+M,j] = real(out), imag(out)
                 end
@@ -158,12 +189,26 @@ function evaldesignmatrixκ!(B::Matrix{T},
                 A.core.αs_singlets, A.core.Ωs_singlets,
                 A.core.β_singlets, A.core.λ0, A.core.κs_λ_singlets)
 
+                if !isfinite(tmp)
+                    println("Es[n].core.d_singlets = ", Es[n].core.d_singlets)
+                    println("Es[n].core.κs_λ_singlets = ", Es[n].core.κs_λ_singlets)
+                    println("Es[n].core.β_singlets = ", Es[n].core.β_singlets)
+
+                    println("Es[n].κ_singlets = ", Es[n].κ_singlets)
+                end
+    
                 B[m,j] += real(tmp)
                 B[m+M,j] += imag(tmp)
             end
         end
 
     end
+
+    ### debug.
+    #if !all(isfinite.(B))
+        JLD.save("debug.jld", "B", B)
+        #println("B is not finite!")
+    #end
 
     return nothing
 end
