@@ -146,7 +146,7 @@ function parseκ!(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T}},
         end
     end
 
-    return nothing
+    return j
 end
 
 function resetκ!(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T}}) where T
@@ -159,7 +159,12 @@ function resetκ!(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T}}) where T
                 Es[n].κ[i][l] = one(T)
             end
         end
+
+        for i = 1:length(Es[n].κ_singlets)
+            j += 1
+            Es[n].κ_singlets[i] = one(T)
+        end
     end
 
-    return nothing
+    return j
 end

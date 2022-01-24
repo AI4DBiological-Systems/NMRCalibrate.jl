@@ -220,11 +220,11 @@ PyPlot.title("f vs q")
 
 
 # @assert 1==2
-
-p_star, q, κ_BLS, getshiftfunc, getβfunc, getλfunc,
+println("Timing: runalignment()")
+@time p_star, q, κ_BLS, getshiftfunc, getβfunc, getλfunc,
 obj_func, N_vars_set = NMRCalibrate.runalignment(Δ_shifts,
 U_cost, y_cost, LS_inds, Es, As, fs, SW;
-max_iters = 5000,
+max_iters = 50000,
 xtol_rel = 1e-7,
 ftol_rel = 1e-12,
 w = w,
@@ -281,13 +281,14 @@ PyPlot.ylabel("real")
 PyPlot.title("cost vs. fit")
 
 
-### debug.
-debug_dict = JLD.load("debug.jld")
-B = debug_dict["B"]
+# ### debug.
+# debug_dict = JLD.load("debug.jld")
+# B = debug_dict["B"]
+# j2 = debug_dict["j"]
 
 @assert 1==23
 
-
+j = NMRCalibrate.parseκ!(Es, ones(10))
 
 ####################
 

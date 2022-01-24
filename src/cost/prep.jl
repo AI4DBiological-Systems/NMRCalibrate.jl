@@ -79,11 +79,12 @@ function runalignment(Δ_shifts::Vector{T},
     p_ub = [ shift_ub; β_ub; λ_ub ]
     p_initial = [shift_initial; β_initial; λ_initial]
 
-    q, updatedfunc, updateβfunc, updateλfunc, updateκfunc,
+    q, updatedfunc, updateβfunc, updateλfunc, updateκfunc, #updatewfunc,
     κ_BLS, getshiftfunc, getβfunc, getλfunc,
     N_vars_set = setupcostcLshiftLS(Es, As, fs, SW,
         LS_inds, U_cost, y_cost, Δ_shifts;
         w = w, κ_lb_default = κ_lb_default, κ_ub_default = κ_ub_default)
+    #updatewfunc(p_initial)
     updateκfunc(p_initial)
 
     # TODO: I am here. 
