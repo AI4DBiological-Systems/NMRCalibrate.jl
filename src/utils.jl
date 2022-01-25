@@ -100,7 +100,7 @@ function setupcostcLshiftLS(Es,
     
     N_vars_set = [N_d; N_β; N_λ]
     
-    ### LS.
+    ### LS κ.
     U_LS = U0[LS_inds]
 
     N_κ, N_κ_singlets = NMRCalibrate.countκ(Es)
@@ -125,7 +125,22 @@ function setupcostcLshiftLS(Es,
     κ_BLS, getshiftfunc, getβfunc, getλfunc, N_vars_set
 end
 
+function mergeinds(inds_set::Vector{Vector{Int}}, merge_set) where T
 
+    # check.
+    for l = 1:length(merge_set)
+        @assert 0 < l <= length(inds_set)
+    end
+
+    # merge.
+    inds = Vector{Int}(undef, 0)
+    for i in merge_set
+        push!(inds, inds_set[i]...)
+    end
+
+    unique!(inds)
+    return inds
+end
 
 
 function costcLshift(U,

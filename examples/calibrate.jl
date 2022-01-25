@@ -40,7 +40,7 @@ base_path_JLD = "/home/roy/Documents/data/NMR/NMRData/src/input/molecules"
 
 # proxy-related.
 tol_coherence = 1e-2
-α_relative_threshold = 0.05 
+α_relative_threshold = 0.05
 λ0 = 3.4
 Δcs_max = 0.2
 κ_λ_lb = 0.5
@@ -113,7 +113,8 @@ u_offset = 0.5
 u_min = ppm2hzfunc(ΩS_ppm_sorted[1] - u_offset)
 u_max = ppm2hzfunc(ΩS_ppm_sorted[end] + u_offset)
 
-NMRSpectraSimulator.fitproxies!(As;
+#NMRSpectraSimulator.fitproxies!(As;
+NMRSpectraSimulator.fitproxiessimple!(As;
     κ_λ_lb = κ_λ_lb,
     κ_λ_ub = κ_λ_ub,
     u_min = u_min,
@@ -130,10 +131,23 @@ cs_config_path = "/home/roy/MEGAsync/inputs/NMR/configs/cs_config_reduced.txt"
 cost_inds_set = NMRCalibrate.prepareoptim(cs_config_path, molecule_names, hz2ppmfunc,
 U_y, y, As; region_min_dist = 0.1)
 
+### just optim region r.
 r = 1
 y_cost = y[cost_inds_set[r]]
 U_cost = U_y[cost_inds_set[r]]
 P_cost = P_y[cost_inds_set[r]]
+
+# ### just optim a few regions.
+# R = [1; 2; 3]
+# m_inds = mergeinds(cost_inds_set, R)
+# y_cost = y[m_inds...]
+# U_cost = U_y[m_inds...]
+# P_cost = P_y[m_inds...]
+
+# ### optim all regions. # 900 secs.
+# y_cost = y_cost_all
+# U_cost = U_cost_all
+# P_cost = P_cost_all
 
 PyPlot.figure(fig_num)
 fig_num += 1
@@ -174,12 +188,13 @@ Es = As2
 #w = ones(length(Es))
 LS_inds = 1:length(U_cost)
 max_iters = 5000
+#max_iters = 20000
 
 q, updatedfunc, updateβfunc, updateλfunc, updateκfunc,
 κ_BLS, getshiftfunc, getβfunc, getλfunc,
 N_vars_set = NMRCalibrate.setupcostcLshiftLS(Es, As, fs, SW,
     LS_inds, U_cost, y_cost, Δ_shifts;
-    w = w, κ_lb_default = 0.2, κ_ub_default = 5.0)
+    w = w, κ_lb_default = 0.2, κ_ub_default = 50.0)
 
 N_d, N_β, N_λ = N_vars_set
 p_initial = [zeros(N_d); zeros(N_β); ones(N_λ)]
@@ -189,28 +204,33 @@ fill!(κ_BLS, 1.0)
 
 ### plot.
 
-f_U = f.(U)
+#f_U = f.(U)
 q_U = q.(U)
+### for now.
+# discrepancy = abs.(f_U-q_U)
+# max_val, ind = findmax(discrepancy)
+# println("relative discrepancy = ", norm(discrepancy)/norm(f_U))
+# println("max discrepancy: ", max_val)
+# println()
+#
+# PyPlot.figure(fig_num)
+# fig_num += 1
+#
+# PyPlot.plot(P, real.(f_U), label = "f")
+# PyPlot.plot(P, real.(q_U), "--", label = "q")
+#
+# PyPlot.legend()
+# PyPlot.xlabel("ppm")
+# PyPlot.ylabel("real")
+# PyPlot.title("f vs q")
 
-discrepancy = abs.(f_U-q_U)
-max_val, ind = findmax(discrepancy)
-println("relative discrepancy = ", norm(discrepancy)/norm(f_U))
-println("max discrepancy: ", max_val)
-println()
-
-PyPlot.figure(fig_num)
-fig_num += 1
-
-PyPlot.plot(P, real.(f_U), label = "f")
-PyPlot.plot(P, real.(q_U), "--", label = "q")
-
-PyPlot.legend()
-PyPlot.xlabel("ppm")
-PyPlot.ylabel("real")
-PyPlot.title("f vs q")
-
-# TODO I am here. suspected memory leak? sometimes lapack error.
-# switch back to BLS, and print first few iters, all p's.
+# TODO I am here.
+# 1. the issue might be too little fit points are at the spiky region.
+# look into time domain for refinement. Try manually modifying p
+# to see how the cost varies.
+#
+# 2. try a scalar beta for partition elements, to reduce number of vars.
+# look at an alternative setupcompoundpartitionitp() in NMRSpectraSimulator.
 
 # p2 = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0]
 # updatedfunc(p2)
@@ -264,7 +284,7 @@ PyPlot.plot(P_cost, real.(y_cost), "x")
 PyPlot.legend()
 PyPlot.xlabel("ppm")
 PyPlot.ylabel("real")
-PyPlot.title("cost vs. fit")
+PyPlot.title("cost vs. data (y)")
 
 
 PyPlot.figure(fig_num)
@@ -278,7 +298,7 @@ PyPlot.plot(P, real.(q_final_U), "--", label = "q final")
 PyPlot.legend()
 PyPlot.xlabel("ppm")
 PyPlot.ylabel("real")
-PyPlot.title("cost vs. fit")
+PyPlot.title("data (y) vs. fit")
 
 
 # ### debug.

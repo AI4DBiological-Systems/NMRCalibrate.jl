@@ -43,7 +43,7 @@ function runalignment(Δ_shifts::Vector{T},
     maxtime = Inf,
     w = ones(T, length(Es)),
     κ_lb_default = 0.2,
-    κ_ub_default = 5.0,
+    κ_ub_default = 50.0,
     λ_each_lb = 0.7,
     λ_each_ub = 5.0) where T <: Real
 
