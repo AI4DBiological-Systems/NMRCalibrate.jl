@@ -51,13 +51,13 @@ function runalignment(Δ_shifts::Vector{T},
 
     #
     N_d = sum( length(As[n].d) + length(As[n].d_singlets) for n = 1:length(As) )
-    N_β = sum( NMRCalibrate.getNβ(As[n]) for n = 1:length(As) )
-    N_λ = sum( NMRCalibrate.getNλ(As[n]) for n = 1:length(As) )
+    N_β = sum( getNβ(As[n]) for n = 1:length(As) )
+    N_λ = sum( getNλ(As[n]) for n = 1:length(As) )
     #N_vars = N_d + N_β + N_λ
 
     #### initial values.
-    shift_lb = zeros(T, N_d)
-    shift_ub = zeros(T, N_d)
+    shift_lb = -copy(Δ_shifts)
+    shift_ub = copy(Δ_shifts)
     shift_initial = zeros(T, N_d)
 
     β_lb = ones(T, N_β) .* (-π)
@@ -78,6 +78,8 @@ function runalignment(Δ_shifts::Vector{T},
     p_lb = [ shift_lb; β_lb; λ_lb ]
     p_ub = [ shift_ub; β_ub; λ_ub ]
     p_initial = [shift_initial; β_initial; λ_initial]
+    println("p_lb = ", p_lb)
+    println("p_ub = ", p_ub)
 
     q, updatedfunc, updateβfunc, updateλfunc, updateκfunc, #updatewfunc,
     κ_BLS, getshiftfunc, getβfunc, getλfunc,
@@ -86,15 +88,16 @@ function runalignment(Δ_shifts::Vector{T},
         w = w, κ_lb_default = κ_lb_default, κ_ub_default = κ_ub_default)
     #updatewfunc(p_initial)
     updateκfunc(p_initial)
+    parseκ!(Es, κ_BLS)
 
-    # TODO: I am here. 
+    # TODO: I am here.
     #q_star = uu->q_star_rad(uu*2*π) # input: Hz.
 
     ### cost function.
     #U_cost_rad = U_cost .* (2*π)
 
     obj_func = pp->costcLshift(U_cost, y_cost,
-    updatedfunc, updateβfunc, updateλfunc, updateκfunc, pp, q)
+    updatedfunc, updateβfunc, updateλfunc, updateκfunc, pp, Es, κ_BLS, q)
 
     grad_func = xx->FiniteDiff.finite_difference_gradient(obj_func, xx)
 

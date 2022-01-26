@@ -4,22 +4,22 @@ end
 
 # average Δc vector for each partition element.
 function viewaverageΔc(A::NMRSpectraSimulator.CompoundFIDType{T}) where T
-    
+
     N_spin_groups = length(A.part_inds_compound)
     out = Vector{Vector{Vector{T}}}(undef, N_spin_groups)
-    
+
     for i = 1:N_spin_groups
-        
+
         part_size = length(A.part_inds_compound[i])
-        
+
         out[i] = Vector{Vector{T}}(undef, part_size)
 
 
         for (k,inds) in enumerate(A.part_inds_compound[i])
-            
+
             list_of_Δc_m = A.Δc_m_compound[i][inds]
-            
-            # insert error handing here later in case list_of_Δc_m is empty.    
+
+            # insert error handing here later in case list_of_Δc_m is empty.
             N_spins = length(list_of_Δc_m[1])
             out[i][k] = zeros(T, N_spins)
 
@@ -40,11 +40,11 @@ end
 function findfreqrange(As::Vector{NMRSpectraSimulator.CompoundFIDType{T}}, hz2ppmfunc) where T
 
     ΩS_ppm = Vector{Vector{T}}(undef, length(As))
-    
+
     for (n,A) in enumerate(As)
 
         ΩS_ppm[n] = hz2ppmfunc.( NMRSpectraSimulator.combinevectors(A.Ωs) ./ (2*π) )
-        
+
         tmp = hz2ppmfunc.( A.Ωs_singlets ./ (2*π) )
         push!(ΩS_ppm[n], tmp...)
     end
@@ -81,39 +81,39 @@ function setupcostcLshiftLS(Es,
 
     ##### update functions.
     N_d = sum( length(Bs[n].d) + length(Bs[n].d_singlets) for n = 1:length(Bs) )
-    N_β = sum( NMRCalibrate.getNβ(Bs[n]) for n = 1:length(Bs) )
-    N_λ = sum( NMRCalibrate.getNλ(Bs[n]) for n = 1:length(Bs) )
+    N_β = sum( getNβ(Bs[n]) for n = 1:length(Bs) )
+    N_λ = sum( getNλ(Bs[n]) for n = 1:length(Bs) )
 
     st_ind_d = 1
     fin_ind_d = st_ind_d + N_d - 1
-    updatedfunc = pp->NMRCalibrate.updatemixtured!(Bs, pp, st_ind_d, fs, SW, Δ_shifts)
+    updatedfunc = pp->updatemixtured!(Bs, pp, st_ind_d, fs, SW, Δ_shifts)
 
     st_ind_β = fin_ind_d + 1
     fin_ind_β = st_ind_β + N_β - 1
-    updateβfunc = pp->NMRCalibrate.updateβ!(Bs, pp, st_ind_β)
+    updateβfunc = pp->updateβ!(Bs, pp, st_ind_β)
     #N_β = sum( sum(length(Bs[n].κs_β[l]) for l = 1:length(Bs[n].κs_β)) + length(Bs[n].β_singlets) for n = 1:length(Bs) )
-    
+
     #λupdate.
-    st_ind_λ = fin_ind_β - 1
+    st_ind_λ = fin_ind_β + 1
     fin_ind_λ = st_ind_λ + N_λ -1
-    updateλfunc = pp->NMRCalibrate.updateλ!(Bs, pp, st_ind_λ)
-    
+    updateλfunc = pp->updateλ!(Bs, pp, st_ind_λ)
+
     N_vars_set = [N_d; N_β; N_λ]
-    
+
     ### LS κ.
     U_LS = U0[LS_inds]
 
-    N_κ, N_κ_singlets = NMRCalibrate.countκ(Es)
+    N_κ, N_κ_singlets = countκ(Es)
     N_κ_vars = N_κ + N_κ_singlets
-    E_BLS, κ_BLS = NMRCalibrate.setupupdatew(length(U_LS), N_κ_vars)
+    E_BLS, κ_BLS = setupupdatew(length(U_LS), N_κ_vars)
 
     κ_lb = ones(N_κ_vars) .* κ_lb_default
     κ_ub = ones(N_κ_vars) .* κ_ub_default
 
-    
+
     b_BLS = [real.(y0[LS_inds]); imag.(y0[LS_inds])]
 
-    updateκfunc = xx->NMRCalibrate.updateκ!(E_BLS, b_BLS, κ_BLS,
+    updateκfunc = xx->updateκ!(E_BLS, b_BLS, κ_BLS,
     U_LS, Es, κ_lb, κ_ub)
 
     #### extract parameters from p.
@@ -146,7 +146,7 @@ end
 function costcLshift(U,
     S_U::Vector{Complex{T}},
     updatedfunc, updateβfunc, updateλfunc, updateκfunc,
-    p::Vector{T},
+    p::Vector{T}, Es, κ_BLS,
     f)::T where T <: Real
 
     #println("p = ", p)
@@ -156,18 +156,24 @@ function costcLshift(U,
     updateλfunc(p)
 
     updateκfunc(p)
+    parseκ!(Es, κ_BLS)
     # try
-    #     updateκfunc(p)    
+    #     updateκfunc(p)
     # catch err_var
     #     println("error: ", err_var)
     #     println("p = ", p)
     # end
-    
+
 
     ## l-2 costfunc.
     cost = zero(T)
     for m = 1:length(S_U)
-        cost += abs2( f(U[m]) - S_U[m] )
+
+        f_u = f(U[m])
+
+        cost += abs2( f_u - S_U[m] )
+        #cost += (abs2(f_u) - abs2(S_U[m]))^2
+
         #cost += abs2( f_buffer[m] - DFT_s[m] ) + (abs2(f_buffer[m]) - abs2(DFT_s[m]))^2
     end
 

@@ -103,7 +103,7 @@ function updateκ!(  A::Matrix{T},
 
     # if !all(isfinite.(A))
     #     println("A is not finite")
-        
+
     #     JLD.save("debug2.jld", "A", A, "b", b)
 
     #     # f = jldopen(filename, "r+")
@@ -128,28 +128,28 @@ function evaldesignmatrixκ!(B::Matrix{T},
     M = length(U)
     N = length(Es)
 
-    N_κ, N_κ_singlets = NMRCalibrate.countκ(Es)
+    N_κ, N_κ_singlets = countκ(Es)
     #println((N_κ, N_κ_singlets))
     #println(size(B))
     @assert size(B) == (2*M, N_κ + N_κ_singlets)
     fill!(B, Inf) # debug.
 
-    #resetκ!(Es)
+    resetκ!(Es)
     j = 0
 
     # loop over each κ partition element in Es.
     for n = 1:N
         A = Es[n]
         @assert length(A.κ) == length(A.core.qs) == length(A.core.κs_λ) == length(A.core.κs_β) == length(A.core.d)
-        
+
          # spin system.
         for i = 1:length(A.κ)
-            
+
             # partition
             for k = 1:length(A.κ[i])
-                
+
                 j += 1
-                
+
                 # loop over each fit position.
                 for m = 1:M
 
@@ -159,7 +159,7 @@ function evaldesignmatrixκ!(B::Matrix{T},
 
                     #tmp = NMRSpectraSimulator.evalitpproxycompound(U[m], A)
                     # tmp = one κ partition.
-                    
+
                     # if !isfinite(out)
                     #     println("eval not finite!")
                     #     println("U[m] = ", U[m])
@@ -171,7 +171,7 @@ function evaldesignmatrixκ!(B::Matrix{T},
 
                     #     println("Es[n].κ = ", Es[n].κ)
                     #     println()
-        
+
                     # end
 
                     B[m,j], B[m+M,j] = real(out), imag(out)
@@ -196,7 +196,7 @@ function evaldesignmatrixκ!(B::Matrix{T},
 
                 #     println("Es[n].κ_singlets = ", Es[n].κ_singlets)
                 # end
-    
+
                 # B[m,j] += real(tmp)
                 # B[m+M,j] += imag(tmp)
                 B[m,j] = real(tmp)

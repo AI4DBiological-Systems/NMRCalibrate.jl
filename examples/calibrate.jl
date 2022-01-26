@@ -113,8 +113,8 @@ u_offset = 0.5
 u_min = ppm2hzfunc(ΩS_ppm_sorted[1] - u_offset)
 u_max = ppm2hzfunc(ΩS_ppm_sorted[end] + u_offset)
 
-#NMRSpectraSimulator.fitproxies!(As;
-NMRSpectraSimulator.fitproxiessimple!(As;
+NMRSpectraSimulator.fitproxies!(As;
+#NMRSpectraSimulator.fitproxiessimple!(As;
     κ_λ_lb = κ_λ_lb,
     κ_λ_ub = κ_λ_ub,
     u_min = u_min,
@@ -131,11 +131,11 @@ cs_config_path = "/home/roy/MEGAsync/inputs/NMR/configs/cs_config_reduced.txt"
 cost_inds_set = NMRCalibrate.prepareoptim(cs_config_path, molecule_names, hz2ppmfunc,
 U_y, y, As; region_min_dist = 0.1)
 
-### just optim region r.
-r = 1
-y_cost = y[cost_inds_set[r]]
-U_cost = U_y[cost_inds_set[r]]
-P_cost = P_y[cost_inds_set[r]]
+# ### just optim region r.
+# r = 1
+# y_cost = y[cost_inds_set[r]]
+# U_cost = U_y[cost_inds_set[r]]
+# P_cost = P_y[cost_inds_set[r]]
 
 # ### just optim a few regions.
 # R = [1; 2; 3]
@@ -144,10 +144,10 @@ P_cost = P_y[cost_inds_set[r]]
 # U_cost = U_y[m_inds...]
 # P_cost = P_y[m_inds...]
 
-# ### optim all regions. # 900 secs.
-# y_cost = y_cost_all
-# U_cost = U_cost_all
-# P_cost = P_cost_all
+### optim all regions. # 900 secs.
+y_cost = y_cost_all
+U_cost = U_cost_all
+P_cost = P_cost_all
 
 PyPlot.figure(fig_num)
 fig_num += 1
@@ -224,19 +224,6 @@ q_U = q.(U)
 # PyPlot.ylabel("real")
 # PyPlot.title("f vs q")
 
-# TODO I am here.
-# 1. the issue might be too little fit points are at the spiky region.
-# look into time domain for refinement. Try manually modifying p
-# to see how the cost varies.
-#
-# 2. try a scalar beta for partition elements, to reduce number of vars.
-# look at an alternative setupcompoundpartitionitp() in NMRSpectraSimulator.
-
-# p2 = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0]
-# updatedfunc(p2)
-# updateβfunc(p2)
-# updateλfunc(p2)
-# updateκfunc(p2)
 
 
 # @assert 1==2
@@ -301,37 +288,8 @@ PyPlot.ylabel("real")
 PyPlot.title("data (y) vs. fit")
 
 
-# ### debug.
-# debug_dict = JLD.load("debug.jld")
-# B = debug_dict["B"]
-# j2 = debug_dict["j"]
-
-@assert 1==23
-
-j = NMRCalibrate.parseκ!(Es, ones(10))
 
 ####################
 
-# view the average Δc vector for each partition for DSS (last compound).
-average_Δc_vectors_DSS = NMRCalibrate.viewaverageΔc(As[end])
 
-
-# visualize.
-q_U = q.(U)
-
-PyPlot.figure(fig_num)
-fig_num += 1
-
-PyPlot.plot(P, real.(q_oracle), label = "oracle q")
-PyPlot.plot(P, real.(q_U), "--", label = "LS kappa")
-
-PyPlot.legend()
-PyPlot.xlabel("ppm")
-PyPlot.ylabel("real")
-PyPlot.title("estimating kappa")
-
-
-
-
-# TODO, figure out private registry.
-# TODO, get the positions in del.jl to here. then proceed to prep optim.
+#include("del.jl") # explore here.
