@@ -31,9 +31,15 @@ projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/"
 # w = [20.0/4.6; 1.0] # BMRB-700 glucose: DSS is 0.0046 M = 4.6 mM.
 
 project_name = "phenylalanine-700"
+# molecule_names = ["L-Phenylalanine"; "DSS"]
+# w = [20/0.5; 1.0] # BMRB-700 phenylalanine: DSS is 500 micro M.
+# w = w ./ norm(w)
+
 molecule_names = ["L-Phenylalanine"; "DSS"]
 w = [20/0.5; 1.0] # BMRB-700 phenylalanine: DSS is 500 micro M.
 w = w ./ norm(w)
+
+#w = ones(2)
 
 # path to the GISSMO Julia storage folder.
 base_path_JLD = "/home/roy/Documents/data/NMR/NMRData/src/input/molecules"
@@ -131,18 +137,23 @@ cs_config_path = "/home/roy/MEGAsync/inputs/NMR/configs/cs_config_reduced.txt"
 cost_inds_set = NMRCalibrate.prepareoptim(cs_config_path, molecule_names, hz2ppmfunc,
 U_y, y, As; region_min_dist = 0.1)
 
+# visualize cost regions.
+# sort(P_cost_set[1]) # etc..
+P_cost_set = collect( P_y[cost_inds_set[r]] for r = 1:length(cost_inds_set) )
+
+
 # ### just optim region r.
-# r = 1
+# r = 4 # 7
 # y_cost = y[cost_inds_set[r]]
 # U_cost = U_y[cost_inds_set[r]]
 # P_cost = P_y[cost_inds_set[r]]
 
 # ### just optim a few regions.
-# R = [1; 2; 3]
-# m_inds = mergeinds(cost_inds_set, R)
-# y_cost = y[m_inds...]
-# U_cost = U_y[m_inds...]
-# P_cost = P_y[m_inds...]
+# R = [4; 5; 6; 7] #[1; 2; 3]
+# m_inds = NMRCalibrate.mergeinds(cost_inds_set, R)
+# y_cost = y[m_inds]
+# U_cost = U_y[m_inds]
+# P_cost = P_y[m_inds]
 
 ### optim all regions. # 900 secs.
 y_cost = y_cost_all
@@ -160,6 +171,8 @@ PyPlot.xlabel("ppm")
 PyPlot.ylabel("real")
 PyPlot.title("positions against data spectrum, real part")
 
+#@assert 1==2
+
 Δ_shifts = NMRSpectraSimulator.combinevectors(Δsys_cs)
 
 ##### set up updates.
@@ -169,8 +182,6 @@ U = ppm2hzfunc.(P)
 #ΩS_ppm = collect( hz2ppmfunc.( NMRSpectraSimulator.combinevectors(A.Ωs) ./ (2*π) ) for A in mixture_params )
 
 
-# lorentzian (oracle/ground truth)
-f = uu->NMRSpectraSimulator.evalmixture(uu, mixture_params)
 
 U_LS = U
 
@@ -202,29 +213,32 @@ p_initial = [zeros(N_d); zeros(N_β); ones(N_λ)]
 #updateκfunc(p_initial)
 fill!(κ_BLS, 1.0)
 
-### plot.
-
-#f_U = f.(U)
 q_U = q.(U)
-### for now.
-# discrepancy = abs.(f_U-q_U)
-# max_val, ind = findmax(discrepancy)
-# println("relative discrepancy = ", norm(discrepancy)/norm(f_U))
-# println("max discrepancy: ", max_val)
-# println()
-#
-# PyPlot.figure(fig_num)
-# fig_num += 1
-#
-# PyPlot.plot(P, real.(f_U), label = "f")
-# PyPlot.plot(P, real.(q_U), "--", label = "q")
-#
-# PyPlot.legend()
-# PyPlot.xlabel("ppm")
-# PyPlot.ylabel("real")
-# PyPlot.title("f vs q")
 
+### plot. # disable if using fitproxiessimple.
+# lorentzian (oracle/ground truth)
+f = uu->NMRSpectraSimulator.evalmixture(uu, mixture_params, w = w)
+f_U = f.(U)
 
+## for now.
+discrepancy = abs.(f_U-q_U)
+max_val, ind = findmax(discrepancy)
+println("relative discrepancy = ", norm(discrepancy)/norm(f_U))
+println("max discrepancy: ", max_val)
+println()
+
+PyPlot.figure(fig_num)
+fig_num += 1
+
+PyPlot.plot(P, real.(f_U), label = "f")
+PyPlot.plot(P, real.(q_U), "--", label = "q")
+
+PyPlot.legend()
+PyPlot.xlabel("ppm")
+PyPlot.ylabel("real")
+PyPlot.title("f vs q")
+
+#@assert 1==2
 
 # @assert 1==2
 println("Timing: runalignment()")
@@ -291,5 +305,5 @@ PyPlot.title("data (y) vs. fit")
 
 ####################
 
-
+# TODO store optim results, and start del.jl as a visualization script for publishing.
 #include("del.jl") # explore here.

@@ -114,7 +114,7 @@ function setupcostcLshiftLS(Es,
     b_BLS = [real.(y0[LS_inds]); imag.(y0[LS_inds])]
 
     updateκfunc = xx->updateκ!(E_BLS, b_BLS, κ_BLS,
-    U_LS, Es, κ_lb, κ_ub)
+    U_LS, Es, w, κ_lb, κ_ub)
 
     #### extract parameters from p.
     getshiftfunc = pp->pp[st_ind_d:fin_ind_d]

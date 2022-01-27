@@ -89,13 +89,14 @@ function updateκ!(  A::Matrix{T},
     κ::Vector{T},
     U_LS,
     Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T}},
+    w::Vector{T},
     κ_lower::Vector{T},
     κ_upper::Vector{T}) where T <: Real
 
     #@assert size(A) == (length(b), length(αS))
     @assert length(b) == 2*length(U_LS)
 
-    evaldesignmatrixκ!(A, U_LS, Es)
+    evaldesignmatrixκ!(A, U_LS, Es, w)
 
     ### LS solve.
     # w[:] = NonNegLeastSquares.nonneg_lsq(A, b; alg = :fnnls)
@@ -122,7 +123,8 @@ end
 
 function evaldesignmatrixκ!(B::Matrix{T},
     U,
-    Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T}}) where T <: Real
+    Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T}},
+    w::Vector{T}) where T <: Real
 
     #
     M = length(U)
@@ -155,7 +157,7 @@ function evaldesignmatrixκ!(B::Matrix{T},
 
                     # taken from evalitproxysys()
                     r = 2*π*U[m] - A.core.d[i]
-                    out = A.core.qs[i][k](r, A.core.κs_λ[i], A.core.κs_β[i])
+                    out = w[n]*A.core.qs[i][k](r, A.core.κs_λ[i], A.core.κs_β[i])
 
                     #tmp = NMRSpectraSimulator.evalitpproxycompound(U[m], A)
                     # tmp = one κ partition.
@@ -185,7 +187,7 @@ function evaldesignmatrixκ!(B::Matrix{T},
             #println("singlet: j = ", j)
             for m = 1:M
 
-                tmp = NMRSpectraSimulator.evalκsinglets(U[m], A.core.d_singlets,
+                tmp = w[n]*NMRSpectraSimulator.evalκsinglets(U[m], A.core.d_singlets,
                 A.core.αs_singlets, A.core.Ωs_singlets,
                 A.core.β_singlets, A.core.λ0, A.core.κs_λ_singlets)
 

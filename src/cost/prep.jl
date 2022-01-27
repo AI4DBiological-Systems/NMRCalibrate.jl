@@ -56,8 +56,10 @@ function runalignment(Δ_shifts::Vector{T},
     #N_vars = N_d + N_β + N_λ
 
     #### initial values.
-    shift_lb = -copy(Δ_shifts)
-    shift_ub = copy(Δ_shifts)
+    # shift_lb = -copy(Δ_shifts)
+    # shift_ub = copy(Δ_shifts)
+    shift_lb = -ones(T, length(Δ_shifts))
+    shift_ub = ones(T, length(Δ_shifts))
     shift_initial = zeros(T, N_d)
 
     β_lb = ones(T, N_β) .* (-π)
