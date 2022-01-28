@@ -24,22 +24,22 @@ Random.seed!(25)
 PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "serif"])
 
 ### user inputs.
+# 0.1% DSS is 0.0046 M = 4.6 mM.
 projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/"
 
-# project_name = "glucose-700"
-# molecule_names = ["D-(+)-Glucose"; "DSS"]
-# w = [20.0/4.6; 1.0] # BMRB-700 glucose: DSS is 0.0046 M = 4.6 mM.
+project_name = "glucose-700"
+molecule_names = ["D-(+)-Glucose"; "DSS"]
+w = [20.0/4.6; 1.0] # BMRB-700 glucose: DSS is 0.1 % => 4.6 mM
 
-project_name = "phenylalanine-700"
+# project_name = "isoleucine-700"
+# molecule_names = ["L-Isoleucine"; "DSS"]
+# w = [20.0/46; 1.0] # BMRB-700 glucose: DSS is 1 % => 46 mM
+
+# project_name = "phenylalanine-700"
 # molecule_names = ["L-Phenylalanine"; "DSS"]
 # w = [20/0.5; 1.0] # BMRB-700 phenylalanine: DSS is 500 micro M.
-# w = w ./ norm(w)
 
-molecule_names = ["L-Phenylalanine"; "DSS"]
-w = [20/0.5; 1.0] # BMRB-700 phenylalanine: DSS is 500 micro M.
-w = w ./ norm(w)
-
-#w = ones(2)
+w = w ./ norm(w) # since the fit data, y, is normalized.
 
 # path to the GISSMO Julia storage folder.
 base_path_JLD = "/home/roy/Documents/data/NMR/NMRData/src/input/molecules"
@@ -238,9 +238,12 @@ PyPlot.xlabel("ppm")
 PyPlot.ylabel("real")
 PyPlot.title("f vs q")
 
-#@assert 1==2
+κ_lb_default = 0.2
+κ_ub_default = 50.0
 
-# @assert 1==2
+# # @assert 1==2
+
+## fit model.
 println("Timing: runalignment()")
 @time p_star, q, κ_BLS, getshiftfunc, getβfunc, getλfunc,
 obj_func, N_vars_set = NMRCalibrate.runalignment(Δ_shifts,
@@ -249,10 +252,19 @@ max_iters = 50000,
 xtol_rel = 1e-7,
 ftol_rel = 1e-12,
 w = w,
-κ_lb_default = 0.2,
-κ_ub_default = 50.0,
+κ_lb_default = κ_lb_default,
+κ_ub_default = κ_ub_default,
 λ_each_lb = 0.9,
 λ_each_ub = 1.1)
+
+### save block.
+save_path = joinpath(joinpath(projects_dir, project_name), "results.bson")
+BSON.bson(save_path,
+p_star = p_star,
+κ_lb_default = κ_lb_default,
+κ_ub_default = κ_ub_default,
+κ_star = κ_BLS)
+## end save block.
 
 d_star = getshiftfunc(p_star)
 β_star = getβfunc(p_star)
@@ -262,48 +274,3 @@ println("β_star = ", β_star)
 println("λ_star = ", λ_star)
 println("κ_BLS = ", κ_BLS)
 println()
-
-### reference.
-
-# reference, zero shift, phase.
-p_test = zeros(sum(N_vars_set))
-initial_cost = obj_func(p_test)
-q_initial_U = q.(U)
-
-p_test = copy(p_star)
-final_cost = obj_func(p_test)
-q_final_U = q.(U)
-
-
-PyPlot.figure(fig_num)
-fig_num += 1
-
-
-PyPlot.plot(P_y, real.(y), label = "y")
-PyPlot.plot(P_cost, real.(y_cost), "x")
-
-PyPlot.legend()
-PyPlot.xlabel("ppm")
-PyPlot.ylabel("real")
-PyPlot.title("cost vs. data (y)")
-
-
-PyPlot.figure(fig_num)
-fig_num += 1
-
-PyPlot.plot(P, real.(q_initial_U), label = "q initial")
-PyPlot.plot(P_y, real.(y), label = "y")
-PyPlot.plot(P, real.(q_final_U), "--", label = "q final")
-#PyPlot.plot(P_cost, real.(y_cost), "x")
-
-PyPlot.legend()
-PyPlot.xlabel("ppm")
-PyPlot.ylabel("real")
-PyPlot.title("data (y) vs. fit")
-
-
-
-####################
-
-# TODO store optim results, and start del.jl as a visualization script for publishing.
-#include("del.jl") # explore here.

@@ -19,13 +19,18 @@ PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "ser
 # solvent_ppm_guess = 4.7
 # solvent_window_ppm = 0.1
 
-
 save_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/"
-project_name = "Nam-Jan2022"
-
+project_name = "isoleucine-700"
+experiment_full_path = "/home/roy/Documents/repo/NMRData/combination/BMRB-700/L-Isoleucine"
 solvent_ppm_guess = 4.7
 solvent_window_ppm = 0.1
-experiment_full_path = "/home/roy/MEGAsync/data/NMR/NRC/Nam_4_amino_acid_mixture_Jan_2022/NHK220113_4AA_glu_PBS_d2o/1"
+
+# save_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/"
+# project_name = "Nam-Jan2022"
+#
+# solvent_ppm_guess = 4.7
+# solvent_window_ppm = 0.1
+# experiment_full_path = "/home/roy/MEGAsync/data/NMR/NRC/Nam_4_amino_acid_mixture_Jan_2022/NHK220113_4AA_glu_PBS_d2o/1"
 ### end inputs.
 
 ## load.
