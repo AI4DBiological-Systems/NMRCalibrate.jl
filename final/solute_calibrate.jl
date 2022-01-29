@@ -31,17 +31,24 @@ projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/"
 # molecule_names = ["D-(+)-Glucose"; "DSS"]
 # w = [20.0/4.6; 1.0] # BMRB-700 glucose: DSS is 0.1 % => 4.6 mM
 
-project_name = "glucose-700-1" # -1 for only the solute.
-molecule_names = ["D-(+)-Glucose";]
-w = [1.0; ] # BMRB-700 glucose: DSS is 0.1 % => 4.6 mM
 
-# project_name = "isoleucine-700"
+# project_name = "isoleucine-700-1"
 # molecule_names = ["L-Isoleucine"; "DSS"]
 # w = [20.0/46; 1.0] # BMRB-700 glucose: DSS is 1 % => 46 mM
 
 # project_name = "phenylalanine-700"
 # molecule_names = ["L-Phenylalanine"; "DSS"]
 # w = [20/0.5; 1.0] # BMRB-700 phenylalanine: DSS is 500 micro M.
+
+
+# project_name = "glucose-700-1" # -1 for only the solute.
+# molecule_names = ["D-(+)-Glucose";]
+# w = [1.0; ] # BMRB-700 glucose: DSS is 0.1 % => 4.6 mM
+
+project_name = "isoleucine-700-1"
+molecule_names = ["L-Isoleucine";]
+w = [1.0;] # BMRB-700 glucose: DSS is 1 % => 46 mM
+
 
 w = w ./ norm(w) # since the fit data, y, is normalized.
 
@@ -147,19 +154,8 @@ U_y, y, As; region_min_dist = 0.1)
 # sort(P_cost_set[1]) # etc..
 P_cost_set = collect( P_y[cost_inds_set[r]] for r = 1:length(cost_inds_set) )
 
+include("./final_helper.jl")
 
-# ### just optim region r.
-# r = 4 # 7
-# y_cost = y[cost_inds_set[r]]
-# U_cost = U_y[cost_inds_set[r]]
-# P_cost = P_y[cost_inds_set[r]]
-
-# ### just optim a few regions.
-# R = [4; 5; 6; 7] #[1; 2; 3]
-# m_inds = NMRCalibrate.mergeinds(cost_inds_set, R)
-# y_cost = y[m_inds]
-# U_cost = U_y[m_inds]
-# P_cost = P_y[m_inds]
 
 ### optim all regions. # 900 secs.
 y_cost = y_cost_all
@@ -189,60 +185,13 @@ U = ppm2hzfunc.(P)
 
 
 
-U_LS = U
-
 ## parameters that affect qs.
 # A.d, A.κs_λ, A.κs_β
 # A.d_singlets, A.αs_singlets, A.Ωs_singlets, A.β_singlets, A.λ0, A.κs_λ_singlets
 # purposely perturb κ.
 
-As2 = collect( NMRSpectraSimulator.κCompoundFIDType(As[i]) for i = 1:length(As) )
+Es = collect( NMRSpectraSimulator.κCompoundFIDType(As[i]) for i = 1:length(As) )
 
-# assemble proxy and compare against oracle at locations in U.
-#w = ones(length(As))
-#q = uu->NMRSpectraSimulator.evalitpproxymixture(uu, As2; w = w)
-Es = As2
-#w = ones(length(Es))
-LS_inds = 1:length(U_cost)
-max_iters = 5000
-#max_iters = 20000
-
-q, updatedfunc, updateβfunc, updateλfunc, updateκfunc,
-κ_BLS, getshiftfunc, getβfunc, getλfunc,
-N_vars_set = NMRCalibrate.setupcostcLshiftLS(Es, As, fs, SW,
-    LS_inds, U_cost, y_cost, Δ_shifts;
-    w = w, κ_lb_default = 0.2, κ_ub_default = 50.0)
-
-N_d, N_β, N_λ = N_vars_set
-p_initial = [zeros(N_d); zeros(N_β); ones(N_λ)]
-
-#updateκfunc(p_initial)
-fill!(κ_BLS, 1.0)
-
-q_U = q.(U)
-
-### plot. # disable if using fitproxiessimple.
-# lorentzian (oracle/ground truth)
-f = uu->NMRSpectraSimulator.evalmixture(uu, mixture_params, w = w)
-f_U = f.(U)
-
-## for now.
-discrepancy = abs.(f_U-q_U)
-max_val, ind = findmax(discrepancy)
-println("relative discrepancy = ", norm(discrepancy)/norm(f_U))
-println("max discrepancy: ", max_val)
-println()
-
-PyPlot.figure(fig_num)
-fig_num += 1
-
-PyPlot.plot(P, real.(f_U), label = "f")
-PyPlot.plot(P, real.(q_U), "--", label = "q")
-
-PyPlot.legend()
-PyPlot.xlabel("ppm")
-PyPlot.ylabel("real")
-PyPlot.title("f vs q")
 
 κ_lb_default = 0.2
 κ_ub_default = 50.0
@@ -250,33 +199,31 @@ PyPlot.title("f vs q")
 # # @assert 1==2
 
 ## fit model.
-println("Timing: runalignment()")
-@time p_star, q, κ_BLS, getshiftfunc, getβfunc, getλfunc,
-obj_func, N_vars_set = NMRCalibrate.runalignment(Δ_shifts,
-U_cost, y_cost, LS_inds, Es, As, fs, SW;
+println("Timing: calibrateregions()")
+@time cost_inds_set, p_star_set, κ_BLS_set, d_star_set, β_star_set, λ_star_set,
+proxies_set = calibrateregions(y, U_y, P_y, cost_inds_set,
+Δ_shifts, As, fs, SW, w;
 max_iters = 50000,
 xtol_rel = 1e-7,
 ftol_rel = 1e-12,
-w = w,
 κ_lb_default = κ_lb_default,
 κ_ub_default = κ_ub_default,
 λ_each_lb = 0.9,
 λ_each_ub = 1.1)
 
 ### save block.
-save_path = joinpath(joinpath(projects_dir, project_name), "results.bson")
+save_path = joinpath(joinpath(projects_dir, project_name), "results_full.bson")
 BSON.bson(save_path,
-p_star = p_star,
+p_star_set = p_star_set,
 κ_lb_default = κ_lb_default,
 κ_ub_default = κ_ub_default,
-κ_star = κ_BLS)
+κ_star_set = κ_BLS_set,
+d_star_set = d_star_set,
+β_star_set = β_star_set,
+λ_star_set = λ_star_set,
+cost_inds_set = cost_inds_set,
+w = w)
 ## end save block.
 
-d_star = getshiftfunc(p_star)
-β_star = getβfunc(p_star)
-λ_star = getλfunc(p_star)
-println("d_star = ", d_star)
-println("β_star = ", β_star)
-println("λ_star = ", λ_star)
-println("κ_BLS = ", κ_BLS)
-println()
+
+q_U_set = collect( proxies_set[r].(U) for r = 1:length(proxies_set) )
