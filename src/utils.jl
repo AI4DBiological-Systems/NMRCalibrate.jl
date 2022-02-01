@@ -1,3 +1,9 @@
+
+function displaypartitionsizes(A::NMRSpectraSimulator.CompoundFIDType{T}) where T
+    #
+    return collect( length(A.part_inds_compound[k]) for k = 1:length(A.part_inds_compound) )
+end
+
 function forcesymmetric(A::Matrix{T})::Matrix{T} where T <: Real
     return (A+A')./2
 end

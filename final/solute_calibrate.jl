@@ -25,7 +25,7 @@ PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "ser
 
 ### user inputs.
 # 0.1% DSS is 0.0046 M = 4.6 mM.
-projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/"
+projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final"
 
 # project_name = "glucose-700"
 # molecule_names = ["D-(+)-Glucose"; "DSS"]
@@ -41,13 +41,18 @@ projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/"
 # w = [20/0.5; 1.0] # BMRB-700 phenylalanine: DSS is 500 micro M.
 
 
-# project_name = "glucose-700-1" # -1 for only the solute.
+# project_name = "D-(+)-Glucose-700" # -1 for only the solute.
 # molecule_names = ["D-(+)-Glucose";]
-# w = [1.0; ] # BMRB-700 glucose: DSS is 0.1 % => 4.6 mM
+# w = [1.0; ]
 
-project_name = "isoleucine-700-1"
-molecule_names = ["L-Isoleucine";]
-w = [1.0;] # BMRB-700 glucose: DSS is 1 % => 46 mM
+project_name = "D-(+)-Glucose-NRC-600" # -1 for only the solute.
+molecule_names = ["D-(+)-Glucose";]
+w = [1.0; ]
+
+
+# project_name = "L-Isoleucine-700"
+# molecule_names = ["L-Isoleucine";]
+# w = [1.0;] # BMRB-700 glucose: DSS is 1 % => 46 mM
 
 
 w = w ./ norm(w) # since the fit data, y, is normalized.
@@ -58,10 +63,17 @@ base_path_JLD = "/home/roy/Documents/repo/NMRData//src/input/molecules"
 # proxy-related.
 tol_coherence = 1e-2
 α_relative_threshold = 0.05
+#Δc_partition_radius = 1e-1 # 17 element partition for glucose spin group 2.
+Δc_partition_radius_candidates = [1e-1; 0.3; 0.5; 0.7; 0.8; 0.9]
+#Δc_partition_radius_candidates = [0.9;]
 λ0 = 3.4
-Δcs_max = 0.2
+Δcs_max = 0.2 # for proxy.
 κ_λ_lb = 0.5
 κ_λ_ub = 2.5
+
+# if a Δc_partition_radius candidate gives max partition sizes less than of
+#   equal to this value, then use that candidate.
+early_exit_part_size = 7
 
 ### end inputs.
 
@@ -110,19 +122,55 @@ PyPlot.title("data spectra")
 
 ####### mixture proxy.
 
+function trydiffΔcradius(Δc_partition_radius_candidates::Vector{T},
+    molecule_names, base_path_JLD, Δcs_max_mixture, hz2ppmfunc, ppm2hzfunc,
+    fs, SW, λ0, ν_0ppm, early_exit_part_size) where T <: Real
+
+    @assert early_exit_part_size > 0
+    @assert all(Δc_partition_radius_candidates .> zero(T))
+
+    Δcs_max_mixture = collect( Δcs_max for i = 1:length(molecule_names))
+
+    for Δc_partition_radius in Δc_partition_radius_candidates[1:end-1]
+
+        mixture_params = NMRSpectraSimulator.setupmixtureproxies(molecule_names,
+            base_path_JLD, Δcs_max_mixture, hz2ppmfunc, ppm2hzfunc, fs, SW, λ0, ν_0ppm;
+            tol_coherence = tol_coherence,
+            α_relative_threshold = α_relative_threshold,
+            Δc_partition_radius = Δc_partition_radius)
+        As = mixture_params
+
+        if all( all(NMRCalibrate.displaypartitionsizes(As[n]) .<= early_exit_part_size) for n = 1:length(As) )
+            return mixture_params, Δc_partition_radius
+        end
+    end
+
+    mixture_params = NMRSpectraSimulator.setupmixtureproxies(molecule_names,
+    base_path_JLD, Δcs_max_mixture, hz2ppmfunc, ppm2hzfunc, fs, SW, λ0, ν_0ppm;
+    tol_coherence = tol_coherence,
+    α_relative_threshold = α_relative_threshold,
+    Δc_partition_radius = Δc_partition_radius_candidates[end])
+
+    return mixture_params, Δc_partition_radius_candidates[end]
+end
 
 Δcs_max_mixture = collect( Δcs_max for i = 1:length(molecule_names))
 
-println("Timing: setupmixtureproxies()")
-@time mixture_params = NMRSpectraSimulator.setupmixtureproxies(molecule_names,
-    base_path_JLD, Δcs_max_mixture, hz2ppmfunc, ppm2hzfunc, fs, SW, λ0,
-    ν_0ppm;
-    tol_coherence = tol_coherence,
-    α_relative_threshold = α_relative_threshold)
+println("Timing: trydiffΔcradius()")
+@time mixture_params, Δc_partition_radius = trydiffΔcradius(Δc_partition_radius_candidates,
+    molecule_names, base_path_JLD, Δcs_max_mixture, hz2ppmfunc, ppm2hzfunc,
+    fs, SW, λ0, ν_0ppm, early_exit_part_size)
 As = mixture_params
 
 ΩS_ppm = NMRCalibrate.findfreqrange(As, hz2ppmfunc)
 ΩS_ppm_sorted = sort(NMRSpectraSimulator.combinevectors(ΩS_ppm))
+
+println("$(project_name): Partition sizes:")
+display(NMRCalibrate.displaypartitionsizes(As[1]))
+println("Δc_partition_radius = ", Δc_partition_radius)
+println()
+
+#@assert 1==2
 
 # u_min = ppm2hzfunc(-0.5)
 # u_max = ppm2hzfunc(3.0)
@@ -206,8 +254,8 @@ println("Timing: calibrateregions()")
 proxies_set = calibrateregions(y, U_y, P_y, cost_inds_set,
 Δ_shifts, As, fs, SW, w;
 max_iters = 50000,
-xtol_rel = 1e-7,
-ftol_rel = 1e-12,
+xtol_rel = 1e-3,
+ftol_rel = 1e-6,
 κ_lb_default = κ_lb_default,
 κ_ub_default = κ_ub_default,
 λ_each_lb = 0.9,

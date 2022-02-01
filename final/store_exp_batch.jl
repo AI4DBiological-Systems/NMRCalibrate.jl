@@ -12,14 +12,16 @@ fig_num = 1
 
 PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "serif"])
 
-mutable struct StoreConfigType
+@kwdef mutable struct StoreConfigType
     save_dir::String
     project_name::String
     experiment_full_path::String
     solvent_ppm_guess::Float64 = 4.7
     solvent_window_ppm::Float64 = 0.1
 end
-
+# function StoreConfigType(x,y,z)
+#     return StoreConfigType(x,y,z,4.7,0.1)
+# end
 
 metadata_set = Vector{StoreConfigType}(undef, 0)
 
@@ -112,12 +114,13 @@ experiment_full_path = "/home/roy/Documents/repo/NMRData/src/experiments/NRC/mis
 
 ## load.
 function batchstoreexp(metadata_set)
+
     for i = 1:length(metadata_set)
-        metadata_set[i].save_dir = save_dir
-        metadata_set[i].project_name = project_name
-        metadata_set[i].experiment_full_path = experiment_full_path
-        metadata_set[i].solvent_ppm_guess = solvent_ppm_guess
-        metadata_set[i].solvent_window_ppm = solvent_window_ppm
+        save_dir = metadata_set[i].save_dir
+        project_name = metadata_set[i].project_name
+        experiment_full_path = metadata_set[i].experiment_full_path
+        solvent_ppm_guess = metadata_set[i].solvent_ppm_guess
+        solvent_window_ppm = metadata_set[i].solvent_window_ppm
 
         s_t, S, hz2ppmfunc, ppm2hzfunc, ν_0ppm, fs, SW, α_0ppm, β_0ppm, λ_0ppm, Ω_0ppm,
             results_0ppm, dic, α_solvent, β_solvent, λ_solvent, Ω_solvent,
