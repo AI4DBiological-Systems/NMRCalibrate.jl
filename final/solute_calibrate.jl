@@ -53,7 +53,7 @@ w = [1.0;] # BMRB-700 glucose: DSS is 1 % => 46 mM
 w = w ./ norm(w) # since the fit data, y, is normalized.
 
 # path to the GISSMO Julia storage folder.
-base_path_JLD = "/home/roy/Documents/data/NMR/NMRData/src/input/molecules"
+base_path_JLD = "/home/roy/Documents/repo/NMRData//src/input/molecules"
 
 # proxy-related.
 tol_coherence = 1e-2
@@ -144,7 +144,9 @@ println("Timing: fitproxies!()")
 ### cost func.
 combinevectors = NMRSpectraSimulator.combinevectors
 
-cs_config_path = "/home/roy/MEGAsync/inputs/NMR/configs/cs_config_reduced.txt"
+#cs_config_path = "/home/roy/MEGAsync/inputs/NMR/configs/reduced_cs_config.txt"
+cs_config_path = "/home/roy/Documents/repo/NMRData/src/input/reduced_cs_config.txt"
+
 
 Δsys_cs, y_cost_all, U_cost_all, P_cost_all, exp_info, cost_inds,
 cost_inds_set = NMRCalibrate.prepareoptim(cs_config_path, molecule_names, hz2ppmfunc,

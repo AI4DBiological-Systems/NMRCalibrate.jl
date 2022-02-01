@@ -34,7 +34,7 @@ molecule_names = ["L-Phenylalanine"; "DSS"]
 w = [20/0.5; 1.0] # BMRB-700 phenylalanine: DSS is 500 micro M.
 
 # path to the GISSMO Julia storage folder.
-base_path_JLD = "/home/roy/Documents/data/NMR/NMRData/src/input/molecules"
+base_path_JLD = "/home/roy/Documents/repo/NMRData/src/input/molecules"
 
 # proxy-related.
 tol_coherence = 1e-2
@@ -73,7 +73,7 @@ y = DFT_s[U_inds] ./ Z
 
 
 #
-S_U = DFT_s[U_inds] 
+S_U = DFT_s[U_inds]
 P_y = hz2ppmfunc.(U_y)
 
 PyPlot.figure(fig_num)

@@ -32,7 +32,7 @@ molecule_names = ["L-Phenylalanine"; "DSS"]
 w = [20/0.5; 1.0] # BMRB-700 phenylalanine: DSS is 500 micro M.
 
 # path to the GISSMO Julia storage folder.
-base_path_JLD = "/home/roy/Documents/data/NMR/NMRData/src/input/molecules"
+base_path_JLD = "/home/roy/Documents/repo/NMRData//src/input/molecules"
 
 # proxy-related.
 tol_coherence = 1e-2
