@@ -272,7 +272,15 @@ d_star_set = d_star_set,
 β_star_set = β_star_set,
 λ_star_set = λ_star_set,
 cost_inds_set = cost_inds_set,
-w = w)
+w = w,
+# proxy setup-related below.
+Δc_partition_radius = Δc_partition_radius,
+tol_coherence = tol_coherence,
+α_relative_threshold = α_relative_threshold,
+λ0 = λ0,
+Δcs_max = Δcs_max,
+κ_λ_lb = κ_λ_lb,
+κ_λ_ub = κ_λ_ub)
 ## end save block.
 
 
