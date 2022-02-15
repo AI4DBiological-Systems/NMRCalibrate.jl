@@ -1,7 +1,28 @@
 
+import Random
+using LinearAlgebra
+import Statistics
+import BSON
+
+import PyPlot
+
 PyPlot.close("all")
 
 Random.seed!(25)
+
+### user inputs.
+projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final"
+
+# project_name = "D-(+)-Glucose-NRC-600"
+# molecule_names = ["D-(+)-Glucose";]
+#
+# project_name = "L-Phenylalanine-700"
+# molecule_names = ["L-Phenylalanine"; "DSS"]
+
+project_name = "L-Glutamine-700"
+molecule_names = ["L-Glutamine"; "DSS"]
+
+### end user inputs.
 
 ### load block.
 load_path = joinpath(joinpath(projects_dir, project_name), "results_full.bson")
@@ -86,5 +107,5 @@ function graphall(dict, Δ_shifts, Es, y, U_y, fs, SW::T; fig_num::Int = 1) wher
 
 end
 
-
+Δ_shifts = NMRSpectraSimulator.combinevectors(Δsys_cs)
 graphall(dict, Δ_shifts, Es, y, U_y, fs, SW; fig_num = 1)

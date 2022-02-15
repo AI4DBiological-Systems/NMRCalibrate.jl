@@ -29,30 +29,66 @@ projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final"
 
 # project_name = "glucose-700"
 # molecule_names = ["D-(+)-Glucose"; "DSS"]
-# w = [20.0/4.6; 1.0] # BMRB-700 glucose: DSS is 0.1 % => 4.6 mM
+# w = [20.0/4.6; 1.0] # BMRB: DSS is 0.1 % => 4.6 mM
 
 
 # project_name = "isoleucine-700-1"
 # molecule_names = ["L-Isoleucine"; "DSS"]
-# w = [20.0/46; 1.0] # BMRB-700 glucose: DSS is 1 % => 46 mM
+# w = [20.0/46; 1.0] # BMRB: DSS is 1 % => 46 mM
 
 # project_name = "phenylalanine-700"
 # molecule_names = ["L-Phenylalanine"; "DSS"]
 # w = [20/0.5; 1.0] # BMRB-700 phenylalanine: DSS is 500 micro M.
 
-
+## reboot. #######
 # project_name = "D-(+)-Glucose-700" # -1 for only the solute.
 # molecule_names = ["D-(+)-Glucose";]
 # w = [1.0; ]
 
-project_name = "D-(+)-Glucose-NRC-600" # -1 for only the solute.
-molecule_names = ["D-(+)-Glucose";]
-w = [1.0; ]
+# project_name = "D-(+)-Glucose-NRC-600"
+# molecule_names = ["D-(+)-Glucose";]
+# w = [1.0; ]
 
+# project_name = "L-Phenylalanine-700"
+# molecule_names = ["L-Phenylalanine"; "DSS"]
+# w = [20/0.5; 1.0] # BMRB-700 phenylalanine: DSS is 500 micro M.
+
+# project_name = "L-Glutamine-700"
+# molecule_names = ["L-Glutamine"; "DSS"]
+# w = [20.0/0.5; 1.0] # BMRB: DSS is 500 uM => 0.5 mM
+
+project_name = "L-Glutamic acid-700"
+molecule_names = ["L-Glutamic acid"; "DSS"]
+w = [20.0/4.6; 1.0] # BMRB: DSS is 0.1% => 4.6 mM
+
+
+# project_name = "L-Serine-700"
+# molecule_names = ["L-Serine"; "DSS"]
+# w = [20.0/46; 1.0] # BMRB: DSS is 1 % => 46 mM
+#
+# project_name = "L-Histidine-700"
+# molecule_names = ["L-Histidine"; "DSS"]
+# w = [20.0/46; 1.0] # BMRB: DSS is 1 % => 46 mM
+
+# project_name = "L-Alanine-700"
+# molecule_names = ["L-Alanine"; "DSS"]
+# w = [20.0/0.5; 1.0] # BMRB: DSS is 500uM => 0.5 mM
+
+# project_name = "L-Threonine-700"
+# molecule_names = ["L-Threonine"; "DSS"]
+# w = [20.0/0.5; 1.0] # BMRB: DSS is 500uM => 0.5 mM
+
+# project_name = "L-Tryptophan-700"
+# molecule_names = ["L-Tryptophan"; "DSS"]
+# w = [20.0/0.5; 1.0] # BMRB: DSS is 500uM => 0.5 mM
+
+# project_name = "L-Valine-700"
+# molecule_names = ["L-Valine"; "DSS"]
+# w = [20.0/0.5; 1.0] # BMRB: DSS is 500uM => 0.5 mM
 
 # project_name = "L-Isoleucine-700"
-# molecule_names = ["L-Isoleucine";]
-# w = [1.0;] # BMRB-700 glucose: DSS is 1 % => 46 mM
+# molecule_names = ["L-Isoleucine"; "DSS"]
+# w = [20.0/46; 1.0] # BMRB: DSS is 1 % => 46 mM
 
 
 w = w ./ norm(w) # since the fit data, y, is normalized.
@@ -246,7 +282,7 @@ Es = collect( NMRSpectraSimulator.κCompoundFIDType(As[i]) for i = 1:length(As) 
 κ_lb_default = 0.2
 κ_ub_default = 50.0
 
-# # @assert 1==2
+#@assert 1==2
 
 ## fit model.
 println("Timing: calibrateregions()")
