@@ -25,6 +25,9 @@ molecule_names = ["D-(+)-Glucose"; "DSS"]
 # project_name = "L-Glutamine-700"
 # molecule_names = ["L-Glutamine"; "DSS"]
 
+# project_name = "D-(+)-Glucose-NRC-600"
+# molecule_names = ["D-(+)-Glucose";]
+
 ### end user inputs.
 
 ### load block.

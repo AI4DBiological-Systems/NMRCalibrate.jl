@@ -28,7 +28,7 @@ PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "ser
 projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final"
 
 
-## reboot. #######
+# ## reboot. #######
 project_name = "D-(+)-Glucose-700"
 molecule_names = ["D-(+)-Glucose"; "DSS"]
 w = [20.0/4.6; 1.0] # BMRB: DSS is 0.1 % => 4.6 mM
@@ -272,7 +272,7 @@ Es = collect( NMRSpectraSimulator.κCompoundFIDType(As[i]) for i = 1:length(As) 
 κ_lb_default = 0.2
 κ_ub_default = 50.0
 
-#@assert 1==2
+@assert 1==2
 
 ## fit model.
 println("Timing: calibrateregions()")
