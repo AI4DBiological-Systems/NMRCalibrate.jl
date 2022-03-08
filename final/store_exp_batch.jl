@@ -141,4 +141,16 @@ function batchstoreexp(metadata_set)
     end
 end
 
+### batch.
+### end batch.
+
+### singular.
+resize!(metadata_set, 0)
+
+push!(metadata_set, StoreConfigType( save_dir = save_dir,
+project_name = "Nam2022_Serine",
+experiment_full_path = "/home/roy/MEGAsync/data/NMR/NRC/Nam_4_amino_acid_mixture_Jan_2022/NHK220113_4AA_glu_PBS_d2o/1"))
+### end singular.
+
+# store.
 batchstoreexp(metadata_set)

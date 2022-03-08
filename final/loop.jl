@@ -48,9 +48,29 @@ function loopscript(p_name_set, m_names_set, w_set)
         println("Now on $(project_name)")
         include("solute_calibrate.jl")
         println()
-        
+
     end
 
 end
 
-loopscript(p_set, m_set, w_set)
+
+### batch.
+#loopscript(p_set, m_set, w_set)
+
+
+#### singular.
+# project_name = "Nam2022_Serine"
+# molecule_names = ["D-(+)-Glucose"; "L-Serine";]
+# w = [1.0; 1.0] #
+
+# project_name = "L-Serine-700"
+# molecule_names = ["L-Serine"; "DSS"]
+# w = [20.0/46; 1.0] # BMRB: DSS is 1 % => 46 mM
+
+project_name = "D-(+)-Glucose-NRC-600"
+molecule_names = ["D-(+)-Glucose";]
+w = [1.0; ]
+
+println("Now on $(project_name)")
+include("solute_calibrate.jl")
+println()

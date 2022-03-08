@@ -10,28 +10,32 @@ PyPlot.close("all")
 
 Random.seed!(25)
 
+projects_dir = save_folder_path
+
+
 ### user inputs.
-projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final"
-
-project_name = "D-(+)-Glucose-700"
-molecule_names = ["D-(+)-Glucose"; "DSS"]
-
+# projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final"
+#
+# project_name = "D-(+)-Glucose-700"
+# molecule_names = ["D-(+)-Glucose"; "DSS"]
+#
 # project_name = "D-(+)-Glucose-NRC-600"
 # molecule_names = ["D-(+)-Glucose";]
 #
 # project_name = "L-Phenylalanine-700"
 # molecule_names = ["L-Phenylalanine"; "DSS"]
-
+#
 # project_name = "L-Glutamine-700"
 # molecule_names = ["L-Glutamine"; "DSS"]
-
+#
 # project_name = "D-(+)-Glucose-NRC-600"
 # molecule_names = ["D-(+)-Glucose";]
 
 ### end user inputs.
 
 ### load block.
-load_path = joinpath(joinpath(projects_dir, project_name), "results_full.bson")
+#load_path = joinpath(joinpath(projects_dir, project_name), "results_full.bson")
+load_path = joinpath(projects_dir, "results_full.bson")
 dict = BSON.load(load_path)
 
 function graphall(dict, Δ_shifts, Es, y, U_y, fs, SW::T; fig_num::Int = 1) where T <: Real

@@ -27,11 +27,13 @@ PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "ser
 # 0.1% DSS is 0.0046 M = 4.6 mM.
 projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final"
 
+#### TODO: load from project name, molecule_names, w from BSON files.
+# find a story to write about.
 
 # ## reboot. #######
-project_name = "D-(+)-Glucose-700"
-molecule_names = ["D-(+)-Glucose"; "DSS"]
-w = [20.0/4.6; 1.0] # BMRB: DSS is 0.1 % => 4.6 mM
+# project_name = "D-(+)-Glucose-700"
+# molecule_names = ["D-(+)-Glucose"; "DSS"]
+# w = [20.0/4.6; 1.0] # BMRB: DSS is 0.1 % => 4.6 mM
 
 # project_name = "D-(+)-Glucose-NRC-600"
 # molecule_names = ["D-(+)-Glucose";]
@@ -272,7 +274,7 @@ Es = collect( NMRSpectraSimulator.κCompoundFIDType(As[i]) for i = 1:length(As) 
 κ_lb_default = 0.2
 κ_ub_default = 50.0
 
-@assert 1==2
+#@assert 1==2
 
 ## fit model.
 println("Timing: calibrateregions()")
@@ -288,7 +290,8 @@ ftol_rel = 1e-6,
 λ_each_ub = 1.1)
 
 ### save block.
-save_path = joinpath(joinpath(projects_dir, project_name), "results_full.bson")
+save_folder_path = joinpath(projects_dir, project_name)
+save_path = joinpath(save_folder_path, "results_full.bson")
 BSON.bson(save_path,
 p_star_set = p_star_set,
 κ_lb_default = κ_lb_default,
