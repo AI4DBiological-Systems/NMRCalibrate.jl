@@ -26,6 +26,8 @@ PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "ser
 ### user inputs.
 # 0.1% DSS is 0.0046 M = 4.6 mM.
 projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final"
+save_folder_path = joinpath(projects_dir, project_name)
+#@assert 1==2
 
 #### TODO: load from project name, molecule_names, w from BSON files.
 # find a story to write about.
@@ -190,6 +192,8 @@ println("Timing: trydiffΔcradius()")
     fs, SW, λ0, ν_0ppm, early_exit_part_size)
 As = mixture_params
 
+
+
 ΩS_ppm = NMRCalibrate.findfreqrange(As, hz2ppmfunc)
 ΩS_ppm_sorted = sort(NMRSpectraSimulator.combinevectors(ΩS_ppm))
 
@@ -216,6 +220,11 @@ println("Timing: fitproxies!()")
     u_max = u_max,
     Δr = 1.0,
     Δκ_λ = 0.05)
+
+#
+# BSON.bson("/home/roy/MEGAsync/inputs/NMR/debug/test_As.bson",
+# As = As)
+# @assert 1==33
 
 ### cost func.
 combinevectors = NMRSpectraSimulator.combinevectors
@@ -281,7 +290,7 @@ println("Timing: calibrateregions()")
 @time cost_inds_set, p_star_set, κ_BLS_set, d_star_set, β_star_set, λ_star_set,
 proxies_set = calibrateregions(y, U_y, P_y, cost_inds_set,
 Δ_shifts, As, fs, SW, w;
-max_iters = 50000,
+max_iters = max_iters,
 xtol_rel = 1e-3,
 ftol_rel = 1e-6,
 κ_lb_default = κ_lb_default,
@@ -290,7 +299,7 @@ ftol_rel = 1e-6,
 λ_each_ub = 1.1)
 
 ### save block.
-save_folder_path = joinpath(projects_dir, project_name)
+
 save_path = joinpath(save_folder_path, "results_full.bson")
 BSON.bson(save_path,
 p_star_set = p_star_set,
@@ -300,7 +309,6 @@ p_star_set = p_star_set,
 d_star_set = d_star_set,
 β_star_set = β_star_set,
 λ_star_set = λ_star_set,
-cost_inds_set = cost_inds_set,
 w = w,
 # proxy setup-related below.
 Δc_partition_radius = Δc_partition_radius,
@@ -309,7 +317,16 @@ tol_coherence = tol_coherence,
 λ0 = λ0,
 Δcs_max = Δcs_max,
 κ_λ_lb = κ_λ_lb,
-κ_λ_ub = κ_λ_ub)
+κ_λ_ub = κ_λ_ub,
+# experiement/cost-related below.
+cost_inds_set = cost_inds_set,
+Δsys_cs = Δsys_cs,
+y_cost_all = y_cost_all,
+U_cost_all = U_cost_all,
+P_cost_all = P_cost_all,
+#exp_info = exp_info,
+cost_inds = cost_inds,
+As = As)
 ## end save block.
 
 

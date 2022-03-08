@@ -72,5 +72,7 @@ molecule_names = ["D-(+)-Glucose";]
 w = [1.0; ]
 
 println("Now on $(project_name)")
+#max_iters = 50000
+max_iters = 5
 include("solute_calibrate.jl")
 println()

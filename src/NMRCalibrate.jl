@@ -1,19 +1,24 @@
 module NMRCalibrate
 
-# remove later.
-import JLD
-# end remove.
+#import JLD
 
 using LinearAlgebra
 import NLopt
 import BSON, Statistics
-import NMRData, NMRDataSetup, NMRSpectraSimulator
 
-# https://github.com/AI4DBiological-Systems/NMRSpecifyRegions
-import NMRSpecifyRegions
+#import NMRData
+import NMRDataSetup # https://github.com/AI4DBiological-Systems/NMRDataSetup.jl
+import BoundedLeastSquares # https://github.com/nboyd/BoundedLeastSquares.jl
 
-# https://github.com/nboyd/BoundedLeastSquares.jl
-import BoundedLeastSquares
+# dependencies to NMRSpectraSimulator. Need to add explicitly since these packages are not on the Julia public registry.
+import GISSMOReader # https://github.com/AI4DBiological-Systems/GISSMOReader.jl
+
+# dependencies to NMRSpecifyRegions. Need to add explicitly since these packages are not on the Julia public registry.
+import NMRSpectraSimulator # https://github.com/AI4DBiological-Systems/NMRSpectraSimulator.jl
+
+#
+import NMRSpecifyRegions # https://github.com/AI4DBiological-Systems/NMRSpecifyRegions
+
 
 include("../src/types.jl")
 include("../src/utils.jl")

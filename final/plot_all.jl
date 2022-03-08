@@ -1,17 +1,24 @@
 
-import Random
-using LinearAlgebra
-import Statistics
-import BSON
+using LinearAlgebra, FFTW
+import BSON, Statistics, PyPlot, Random
 
-import PyPlot
+import NMRSpectraSimulator
+
+# for loading something with Interpolations.jl
+import OffsetArrays
+import Interpolations
+
+#import Clustering
 
 PyPlot.close("all")
+fig_num = 1
 
 Random.seed!(25)
+PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "serif"])
 
-projects_dir = save_folder_path
 
+#projects_dir = save_folder_path
+projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/D-(+)-Glucose-NRC-600"
 
 ### user inputs.
 # projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final"
@@ -37,6 +44,7 @@ projects_dir = save_folder_path
 #load_path = joinpath(joinpath(projects_dir, project_name), "results_full.bson")
 load_path = joinpath(projects_dir, "results_full.bson")
 dict = BSON.load(load_path)
+Δsys_cs = convert(Vector{Vector{Float64}}, dict[:Δsys_cs])
 
 function graphall(dict, Δ_shifts, Es, y, U_y, fs, SW::T; fig_num::Int = 1) where T <: Real
 
@@ -118,4 +126,7 @@ function graphall(dict, Δ_shifts, Es, y, U_y, fs, SW::T; fig_num::Int = 1) wher
 end
 
 Δ_shifts = NMRSpectraSimulator.combinevectors(Δsys_cs)
+
+As = collect( dict[:As][i] for i = 1:length(dict[:As]) )
+Es = collect( NMRSpectraSimulator.κCompoundFIDType(As[i]) for i = 1:length(As) )
 graphall(dict, Δ_shifts, Es, y, U_y, fs, SW; fig_num = 1)
