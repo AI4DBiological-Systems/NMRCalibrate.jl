@@ -25,7 +25,7 @@ Random.seed!(25)
 PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "serif"])
 
 
-include("./final_helper.jl")
+include("./helpers/final_helpers.jl")
 
 #projects_dir = save_folder_path
 #projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/D-(+)-Glucose-NRC-600"

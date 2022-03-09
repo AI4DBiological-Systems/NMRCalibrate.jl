@@ -241,7 +241,7 @@ U_y, y, As; region_min_dist = 0.1)
 # sort(P_cost_set[1]) # etc..
 P_cost_set = collect( P_y[cost_inds_set[r]] for r = 1:length(cost_inds_set) )
 
-include("./final_helper.jl")
+include("./helpers/final_helpers.jl")
 
 
 ### optim all regions. # 900 secs.
