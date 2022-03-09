@@ -6,8 +6,8 @@ w_set = Vector{Vector{Float64}}(undef, 0)
 #include("./helpers/loop_entries1.jl")
 include("./helpers/loop_entries_NamJan2022.jl")
 
-function loopscript(p_name_set, m_names_set, w_set;
-    max_iters = 50000)
+function loopscript(p_name_set, m_names_set, w_set,
+    max_iters)
 
     for i = 1:length(p_name_set)
         project_name = p_name_set[i]
@@ -24,7 +24,8 @@ end
 
 
 ### batch.
-loopscript(p_set, m_set, w_set; max_iters = 50000)
+max_iters = 50000
+loopscript(p_set, m_set, w_set, max_iters)
 ### end batch.
 
 # #### singular.
