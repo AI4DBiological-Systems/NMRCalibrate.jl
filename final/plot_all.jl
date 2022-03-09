@@ -1,6 +1,7 @@
 
 using LinearAlgebra, FFTW
-import BSON, Statistics, PyPlot, Random
+import BSON, Statistics, Random
+import PyPlot
 
 import NMRSpectraSimulator
 
@@ -11,6 +12,10 @@ import .NMRCalibrate
 import OffsetArrays
 import Interpolations
 
+import PlotlyJS
+import Plots
+Plots.plotly()
+
 #import Clustering
 
 PyPlot.close("all")
@@ -20,9 +25,12 @@ Random.seed!(25)
 PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "serif"])
 
 
+include("./final_helper.jl")
+
 #projects_dir = save_folder_path
-projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/D-(+)-Glucose-NRC-600"
-#projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/Nam2022_Serine"
+#projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/D-(+)-Glucose-NRC-600"
+projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/Nam2022_Serine"
+project_dit = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/L-Serine-700"
 
 ### user inputs.
 # projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final"
@@ -43,6 +51,9 @@ projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/D-(+)-Glucose-NRC
 # molecule_names = ["D-(+)-Glucose";]
 
 ### end user inputs.
+plots_save_folder = joinpath(projects_dir, "plots")
+isdir(plots_save_folder) || mkdir(plots_save_folder)
+project_title = "test" # TODO change later.
 
 ### load block.
 #load_path = joinpath(joinpath(projects_dir, project_name), "results_full.bson")
@@ -71,7 +82,10 @@ u_max = ppm2hzfunc(ΩS_ppm_sorted[end] + u_offset)
 P = LinRange(hz2ppmfunc(u_min), hz2ppmfunc(u_max), 50000)
 U = ppm2hzfunc.(P)
 
-function graphall(dict, Δ_shifts, Es, y, U_y, P_y, fs, SW::T; fig_num::Int = 1) where T <: Real
+function graphall(dict, Δ_shifts, Es, y, U_y, P_y, fs, SW::T,
+    project_title::String,
+    plots_save_folder::String;
+    fig_num::Int = 1) where T <: Real
 
     p_star_set = dict[:p_star_set]
     κ_lb_default = dict[:κ_lb_default]
@@ -146,6 +160,16 @@ function graphall(dict, Δ_shifts, Es, y, U_y, P_y, fs, SW::T; fig_num::Int = 1)
         PyPlot.ylabel("real")
         PyPlot.title("r = $(r). data (y) vs. fit")
 
+        plots_save_path = joinpath(plots_save_folder, "region_$(r)_real.html")
+        title_string = "$(project_title): region $(r), real"
+        savefigfitresult(plots_save_path, title_string,
+         real.(q_final_U), P, P_cost, real.(y_cost);
+        initial_fit = real.(q_initial_U))
+
+        title_string = "$(project_title): region $(r), imaginary"
+        savefigfitresult(plots_save_path, title_string,
+        imag.(q_final_U), P, P_cost, imag.(y_cost);
+        initial_fit = imag.(q_initial_U))
     end
 
 end
@@ -154,4 +178,5 @@ end
 
 
 Es = collect( NMRSpectraSimulator.κCompoundFIDType(As[i]) for i = 1:length(As) )
-graphall(dict, Δ_shifts, Es, y, U_y, P_y, fs, SW; fig_num = 1)
+graphall(dict, Δ_shifts, Es, y, U_y, P_y, fs, SW,
+project_title, plots_save_folder; fig_num = 1)

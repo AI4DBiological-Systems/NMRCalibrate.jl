@@ -1,7 +1,4 @@
 
-
-
-
 function calibrateregions( y::Vector{Complex{T}},
     U_y, P_y, cost_inds_set, Δ_shifts, As, fs, SW::T, w;
     max_iters = 5000,
@@ -58,4 +55,51 @@ function calibrateregions( y::Vector{Complex{T}},
     end
 
     return cost_inds_set, p_star_set, κ_BLS_set, d_star_set, β_star_set, λ_star_set, proxies_set
+end
+
+
+
+function savefigfitresult(save_path::String,
+    title_string::String,
+    q_U::Vector{T},
+    P,
+    P_cost,
+    y_cost::Vector{T};
+    initial_fit::Vector{T} = zeros(T, 0),
+    P_y = P_cost,
+    y = y_cost) where T
+
+    plot_obj = Plots.plot( P_y,
+        y,
+        title = title_string,
+        label = "Data",
+        seriestype = :line,
+        ticks = :native,
+        xlims = (P[1],P[end]),
+        hover = P,
+        linewidth = 4,
+        xflip = true,
+        size = (1600, 900))
+
+    Plots.plot!(plot_obj, P, q_U, label = "Fitted model",
+        seriestype = :line,
+        linestyle = :dot,
+        xflip = true,
+        linewidth = 4)
+
+    if !isempty(initial_fit)
+        Plots.plot!(plot_obj, P, initial_fit, label = "Initial model",
+            seriestype = :line,
+            linestyle = :dash,
+            xflip = true,
+            linewidth = 4)
+    end
+
+    if !isempty(y_cost)
+        Plots.plot!(plot_obj, P_cost, y_cost, label = "Fit positions",
+            markershape = :circle,
+            seriestype = :scatter)
+    end
+
+    Plots.savefig(plot_obj, save_path)
 end
