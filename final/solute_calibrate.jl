@@ -326,7 +326,12 @@ U_cost_all = U_cost_all,
 P_cost_all = P_cost_all,
 #exp_info = exp_info,
 cost_inds = cost_inds,
-As = As)
+As = As,
+y = y,
+U_y = U_y,
+fs = fs,
+SW = SW,
+ν_0ppm = ν_0ppm)
 ## end save block.
 
 

@@ -4,6 +4,9 @@ import BSON, Statistics, PyPlot, Random
 
 import NMRSpectraSimulator
 
+include("../src/NMRCalibrate.jl")
+import .NMRCalibrate
+
 # for loading something with Interpolations.jl
 import OffsetArrays
 import Interpolations
@@ -19,6 +22,7 @@ PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "ser
 
 #projects_dir = save_folder_path
 projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/D-(+)-Glucose-NRC-600"
+#projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/Nam2022_Serine"
 
 ### user inputs.
 # projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final"
@@ -44,9 +48,30 @@ projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/D-(+)-Glucose-NRC
 #load_path = joinpath(joinpath(projects_dir, project_name), "results_full.bson")
 load_path = joinpath(projects_dir, "results_full.bson")
 dict = BSON.load(load_path)
+As = collect( dict[:As][i] for i = 1:length(dict[:As]) )
 Δsys_cs = convert(Vector{Vector{Float64}}, dict[:Δsys_cs])
+y = convert(Vector{Complex{Float64}}, dict[:y])
+U_y = convert(Vector{Float64}, dict[:U_y])
+SW = dict[:SW]
+fs = dict[:fs]
+ν_0ppm = dict[:ν_0ppm]
 
-function graphall(dict, Δ_shifts, Es, y, U_y, fs, SW::T; fig_num::Int = 1) where T <: Real
+hz2ppmfunc = uu->(uu - ν_0ppm)*SW/fs
+ppm2hzfunc = pp->(ν_0ppm + pp*fs/SW)
+P_y = hz2ppmfunc.(U_y)
+
+
+ΩS_ppm = NMRCalibrate.findfreqrange(As, hz2ppmfunc)
+ΩS_ppm_sorted = sort(NMRSpectraSimulator.combinevectors(ΩS_ppm))
+u_offset = 0.5
+u_min = ppm2hzfunc(ΩS_ppm_sorted[1] - u_offset)
+u_max = ppm2hzfunc(ΩS_ppm_sorted[end] + u_offset)
+
+
+P = LinRange(hz2ppmfunc(u_min), hz2ppmfunc(u_max), 50000)
+U = ppm2hzfunc.(P)
+
+function graphall(dict, Δ_shifts, Es, y, U_y, P_y, fs, SW::T; fig_num::Int = 1) where T <: Real
 
     p_star_set = dict[:p_star_set]
     κ_lb_default = dict[:κ_lb_default]
@@ -127,6 +152,6 @@ end
 
 Δ_shifts = NMRSpectraSimulator.combinevectors(Δsys_cs)
 
-As = collect( dict[:As][i] for i = 1:length(dict[:As]) )
+
 Es = collect( NMRSpectraSimulator.κCompoundFIDType(As[i]) for i = 1:length(As) )
-graphall(dict, Δ_shifts, Es, y, U_y, fs, SW; fig_num = 1)
+graphall(dict, Δ_shifts, Es, y, U_y, P_y, fs, SW; fig_num = 1)
