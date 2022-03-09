@@ -1,4 +1,5 @@
 
+# not needed?
 using LinearAlgebra, FFTW
 import BSON, Statistics, Random
 import PyPlot
@@ -59,7 +60,7 @@ project_title = "test" # TODO change later.
 #load_path = joinpath(joinpath(projects_dir, project_name), "results_full.bson")
 load_path = joinpath(projects_dir, "results_full.bson")
 dict = BSON.load(load_path)
-As = collect( dict[:As][i] for i = 1:length(dict[:As]) )
+#As = collect( dict[:As][i] for i = 1:length(dict[:As]) )
 Δsys_cs = convert(Vector{Vector{Float64}}, dict[:Δsys_cs])
 y = convert(Vector{Complex{Float64}}, dict[:y])
 U_y = convert(Vector{Float64}, dict[:U_y])
@@ -166,7 +167,6 @@ function graphall(dict, Δ_shifts, Es, y, U_y, P_y, fs, SW::T,
          real.(q_final_U), P, P_cost, real.(y_cost);
         initial_fit = real.(q_initial_U))
 
-        plots_save_path = joinpath(plots_save_folder, "region_$(r)_imaginary.html")
         title_string = "$(project_title): region $(r), imaginary"
         savefigfitresult(plots_save_path, title_string,
         imag.(q_final_U), P, P_cost, imag.(y_cost);
