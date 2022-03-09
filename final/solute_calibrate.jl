@@ -214,12 +214,12 @@ u_max = ppm2hzfunc(ΩS_ppm_sorted[end] + u_offset)
 println("Timing: fitproxies!()")
 @time NMRSpectraSimulator.fitproxies!(As;
 #NMRSpectraSimulator.fitproxiessimple!(As;
-    κ_λ_lb = κ_λ_lb,
-    κ_λ_ub = κ_λ_ub,
-    u_min = u_min,
-    u_max = u_max,
-    Δr = 1.0,
-    Δκ_λ = 0.05)
+κ_λ_lb = κ_λ_lb,
+κ_λ_ub = κ_λ_ub,
+u_min = u_min,
+u_max = u_max,
+Δr = 1.0,
+Δκ_λ = 0.05)
 
 #
 # BSON.bson("/home/roy/MEGAsync/inputs/NMR/debug/test_As.bson",

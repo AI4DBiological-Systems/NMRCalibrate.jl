@@ -28,9 +28,9 @@ PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "ser
 include("./final_helper.jl")
 
 #projects_dir = save_folder_path
-projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/D-(+)-Glucose-NRC-600"
+#projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/D-(+)-Glucose-NRC-600"
 #projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/Nam2022_Serine"
-#project_dit = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/L-Serine-700"
+projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/L-Serine-700"
 
 ### user inputs.
 # projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final"
@@ -125,9 +125,19 @@ function graphall(dict, Δ_shifts, Es, y, U_y, P_y, fs, SW::T,
         ### reference.
 
         # reference, zero shift, phase.
-        p_test = zeros(sum(N_vars_set))
-        initial_cost = obj_func(p_test)
+        N_d = sum( length(As[n].d) + length(As[n].d_singlets) for n = 1:length(As) )
+        N_β = sum( NMRCalibrate.getNβ(As[n]) for n = 1:length(As) )
+        N_λ = sum( NMRCalibrate.getNλ(As[n]) for n = 1:length(As) )
+        shift_initial = zeros(T, N_d)
+        β_initial = zeros(T, N_β)
+        λ_initial = ones(T, N_λ)
+        p_initial = [shift_initial; β_initial; λ_initial]
+
+        initial_cost = obj_func(p_initial)
+        NMRCalibrate.parseκ!(Es, ones(T, length(κ_BLS)))
+        fill!(w, 1.0)
         q_initial_U = q.(U)
+        #println("norm(q_initial_U) = ", norm(q_initial_U))
 
         p_test = copy(p_star_set[r])
         final_cost = obj_func(p_test)
@@ -171,6 +181,12 @@ function graphall(dict, Δ_shifts, Es, y, U_y, P_y, fs, SW::T,
         savefigfitresult(plots_save_path, title_string,
         imag.(q_final_U), P, P_cost, imag.(y_cost);
         initial_fit = imag.(q_initial_U))
+
+        plots_save_path = joinpath(plots_save_folder, "region_$(r)_modulus.html")
+        title_string = "$(project_title): region $(r), modulus"
+        savefigfitresult(plots_save_path, title_string,
+        abs.(q_final_U), P, P_cost, abs.(y_cost);
+        initial_fit = abs.(q_initial_U))
     end
 
 end

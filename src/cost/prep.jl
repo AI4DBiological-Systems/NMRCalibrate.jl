@@ -28,7 +28,6 @@ function prepareoptim(cs_config_path,
 end
 
 
-
 function runalignment(Δ_shifts::Vector{T},
     U_cost,
     y_cost::Vector{Complex{T}},

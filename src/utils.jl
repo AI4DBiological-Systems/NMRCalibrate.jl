@@ -59,7 +59,6 @@ function findfreqrange(As::Vector{NMRSpectraSimulator.CompoundFIDType{T}}, hz2pp
 end
 
 
-
 function setupcostcLshiftLS(Es,
     Bs,
     fs::T,
