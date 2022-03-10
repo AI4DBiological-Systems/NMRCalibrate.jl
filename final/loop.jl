@@ -3,8 +3,8 @@ p_set = Vector{String}(undef, 0)
 m_set = Vector{Vector{String}}(undef, 0)
 w_set = Vector{Vector{Float64}}(undef, 0)
 
-#include("./helpers/loop_entries1.jl")
-include("./helpers/loop_entries_NamJan2022.jl")
+include("./helpers/loop_entries1.jl")
+#include("./helpers/loop_entries_NamJan2022.jl")
 
 function loopscript(p_name_set, m_names_set, w_set,
     max_iters)

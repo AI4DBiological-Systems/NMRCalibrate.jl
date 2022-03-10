@@ -29,16 +29,17 @@ include("./helpers/final_helpers.jl")
 include("./helpers/resonance_helpers.jl")
 
 #projects_dir = save_folder_path
-#projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/D-(+)-Glucose-NRC-600"
 #projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/Nam2022_Serine"
-projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/L-Serine-700"
-
-
-
-
+#projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/L-Serine-700"
 projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/D-(+)-Glucose-NRC-600"
-#projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/Nam2022_Serine"
-#project_dit = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/L-Serine-700"
+
+
+plots_save_folder = joinpath(projects_dir, "plots")
+isdir(plots_save_folder) || mkdir(plots_save_folder)
+project_title = "resonance groupings"
+
+
+
 
 T = Float64
 
@@ -110,20 +111,41 @@ U = ppm2hzfunc.(P)
 # A.d_singlets, A.αs_singlets, A.Ωs_singlets, A.β_singlets, A.λ0, A.κs_λ_singlets
 q = uu->NMRSpectraSimulator.evalitpproxymixture(uu, As)
 
-g = uu->evalitpproxycompoundresonance(uu, As[1])
+#g = uu->evalitpproxycompoundresonance(uu, As[1])
+A = As[1]
+g1 = uu->evalitpproxysysresonance(A.qs, uu, A.d, A.κs_λ, A.κs_β)
+g2 = uu->evalsingletsresonance(uu, A.d_singlets, A.αs_singlets, A.Ωs_singlets,
+A.β_singlets, A.λ0, A.κs_λ_singlets)
 
 f_U = f.(U)
 q_U = q.(U)
-g_U = g.(U)
+g1_U = g1.(U)
+g2_U = g2.(U)
 
-g_qs_U, g_singlets_U = convertresonancetimeseries(g_U)
+#g_qs_U, g_singlets_U = convertresonancetimeseries(g_U)
 
 import Destruct
-x, y = Destruct.destruct(g_U);
-# I am here. think about how to use Destruct in resonance_helpers.jl
+z1 = Destruct.destruct(g1_U);
+q_singlets_evals = Destruct.destruct(g2_U);
 
 
-@assert 1==2
+# collect( length(z1[i]) for i = 1:length(z1))
+# collect( length(z2[i]) for i = 1:length(z2))
+qs_evals = assembleqsevals(z1, A.qs)
+
+
+sanity_check = zeros(Complex{Float64}, length(q_U))
+if !isempty(z1)
+    sanity_check += sum(z1)
+end
+if !isempty(q_singlets_evals)
+    sanity_check += sum(q_singlets_evals)
+end
+@assert norm(sanity_check - q_U) < 1e-14
+println("sanity: ", norm(sanity_check - q_U))
+println()
+
+
 
 discrepancy = abs.(f_U-q_U)
 max_val, ind = findmax(discrepancy)
@@ -135,7 +157,27 @@ println()
 PyPlot.plot(P, real.(f_U), label = "f")
 PyPlot.plot(P, real.(q_U), label = "q")
 
+#visualizesubgroups(P, qs_evals, q_singlets_evals, real)
+
 PyPlot.legend()
 PyPlot.xlabel("ppm")
 PyPlot.ylabel("real")
 PyPlot.title("f vs q")
+
+#@assert 1==2
+
+plots_save_path = joinpath(plots_save_folder, "groups_real.html")
+title_string = "$(project_title), real"
+savefiggroups(plots_save_path, title_string,
+    P, q_U, qs_evals, q_singlets_evals, real)
+
+#
+plots_save_path = joinpath(plots_save_folder, "groups_imag.html")
+title_string = "$(project_title), imag"
+savefiggroups(plots_save_path, title_string,
+    P, q_U, qs_evals, q_singlets_evals, real)
+#
+plots_save_path = joinpath(plots_save_folder, "groups_modulus.html")
+title_string = "$(project_title), modulus"
+savefiggroups(plots_save_path, title_string,
+    P, q_U, qs_evals, q_singlets_evals, real)
