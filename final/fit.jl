@@ -17,6 +17,70 @@ import JLD
 import Statistics
 import Random
 
+include("./helpers/final_helpers.jl")
+include("./helpers/solute_calibrate.jl")
+include("./helpers/loop_entries1.jl")
+
+PyPlot.close("all")
+fig_num = 1
+
+Random.seed!(25)
+PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "serif"])
+
+
+
+# path to the GISSMO Julia storage folder.
+#cs_config_path = "/home/roy/MEGAsync/inputs/NMR/configs/reduced_cs_config.txt"
+
+# project_name = "D-(+)-Glucose-700"
+# molecule_names = ["D-(+)-Glucose"; "DSS"]
+# w = [20.0/4.6; 1.0] # BMRB: DSS is 0.1 % => 4.6 mM
+
+project_name = "D-(+)-Glucose-NRC-600"
+molecule_names = ["D-(+)-Glucose";]
+w = [1.0; ]
+max_iters = 50000
+
+projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final"
+base_path_JLD = "/home/roy/Documents/repo/NMRData//src/input/molecules"
+cs_config_path = "/home/roy/Documents/repo/NMRData/src/input/reduced_cs_config.txt"
+
+
+function trydiffΔcradius(Δc_partition_radius_candidates::Vector{T},
+    molecule_names, base_path_JLD, Δcs_max_mixture, hz2ppmfunc, ppm2hzfunc,
+    fs, SW, λ0, ν_0ppm, early_exit_part_size, Δcs_max, tol_coherence,
+    α_relative_threshold) where T <: Real
+
+    @assert early_exit_part_size > 0
+    @assert all(Δc_partition_radius_candidates .> zero(T))
+
+    Δcs_max_mixture = collect( Δcs_max for i = 1:length(molecule_names))
+
+    for Δc_partition_radius in Δc_partition_radius_candidates[1:end-1]
+
+        mixture_params = NMRSpectraSimulator.setupmixtureproxies(molecule_names,
+            base_path_JLD, Δcs_max_mixture, hz2ppmfunc, ppm2hzfunc, fs, SW, λ0, ν_0ppm;
+            tol_coherence = tol_coherence,
+            α_relative_threshold = α_relative_threshold,
+            Δc_partition_radius = Δc_partition_radius)
+        As = mixture_params
+
+        if all( all(NMRCalibrate.displaypartitionsizes(As[n]) .<= early_exit_part_size) for n = 1:length(As) )
+            return mixture_params, Δc_partition_radius
+        end
+    end
+
+    mixture_params = NMRSpectraSimulator.setupmixtureproxies(molecule_names,
+    base_path_JLD, Δcs_max_mixture, hz2ppmfunc, ppm2hzfunc, fs, SW, λ0, ν_0ppm;
+    tol_coherence = tol_coherence,
+    α_relative_threshold = α_relative_threshold,
+    Δc_partition_radius = Δc_partition_radius_candidates[end])
+
+    return mixture_params, Δc_partition_radius_candidates[end]
+end
+
+println("Now on $(project_name)")
+
 PyPlot.close("all")
 fig_num = 1
 
@@ -25,7 +89,6 @@ PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "ser
 
 ### user inputs.
 # 0.1% DSS is 0.0046 M = 4.6 mM.
-projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final"
 save_folder_path = joinpath(projects_dir, project_name)
 #@assert 1==2
 
@@ -82,13 +145,7 @@ save_folder_path = joinpath(projects_dir, project_name)
 # molecule_names = ["L-Valine"; "DSS"]
 # w = [20.0/0.5; 1.0] # BMRB: DSS is 500uM => 0.5 mM
 
-
-
-
 w = w ./ norm(w) # since the fit data, y, is normalized.
-
-# path to the GISSMO Julia storage folder.
-base_path_JLD = "/home/roy/Documents/repo/NMRData//src/input/molecules"
 
 # proxy-related.
 tol_coherence = 1e-2
@@ -152,44 +209,14 @@ PyPlot.title("data spectra")
 
 ####### mixture proxy.
 
-function trydiffΔcradius(Δc_partition_radius_candidates::Vector{T},
-    molecule_names, base_path_JLD, Δcs_max_mixture, hz2ppmfunc, ppm2hzfunc,
-    fs, SW, λ0, ν_0ppm, early_exit_part_size) where T <: Real
 
-    @assert early_exit_part_size > 0
-    @assert all(Δc_partition_radius_candidates .> zero(T))
-
-    Δcs_max_mixture = collect( Δcs_max for i = 1:length(molecule_names))
-
-    for Δc_partition_radius in Δc_partition_radius_candidates[1:end-1]
-
-        mixture_params = NMRSpectraSimulator.setupmixtureproxies(molecule_names,
-            base_path_JLD, Δcs_max_mixture, hz2ppmfunc, ppm2hzfunc, fs, SW, λ0, ν_0ppm;
-            tol_coherence = tol_coherence,
-            α_relative_threshold = α_relative_threshold,
-            Δc_partition_radius = Δc_partition_radius)
-        As = mixture_params
-
-        if all( all(NMRCalibrate.displaypartitionsizes(As[n]) .<= early_exit_part_size) for n = 1:length(As) )
-            return mixture_params, Δc_partition_radius
-        end
-    end
-
-    mixture_params = NMRSpectraSimulator.setupmixtureproxies(molecule_names,
-    base_path_JLD, Δcs_max_mixture, hz2ppmfunc, ppm2hzfunc, fs, SW, λ0, ν_0ppm;
-    tol_coherence = tol_coherence,
-    α_relative_threshold = α_relative_threshold,
-    Δc_partition_radius = Δc_partition_radius_candidates[end])
-
-    return mixture_params, Δc_partition_radius_candidates[end]
-end
 
 Δcs_max_mixture = collect( Δcs_max for i = 1:length(molecule_names))
 
 println("Timing: trydiffΔcradius()")
 @time mixture_params, Δc_partition_radius = trydiffΔcradius(Δc_partition_radius_candidates,
     molecule_names, base_path_JLD, Δcs_max_mixture, hz2ppmfunc, ppm2hzfunc,
-    fs, SW, λ0, ν_0ppm, early_exit_part_size)
+    fs, SW, λ0, ν_0ppm, early_exit_part_size, Δcs_max, tol_coherence, α_relative_threshold)
 As = mixture_params
 
 
@@ -229,10 +256,6 @@ u_max = u_max,
 ### cost func.
 combinevectors = NMRSpectraSimulator.combinevectors
 
-#cs_config_path = "/home/roy/MEGAsync/inputs/NMR/configs/reduced_cs_config.txt"
-cs_config_path = "/home/roy/Documents/repo/NMRData/src/input/reduced_cs_config.txt"
-
-
 Δsys_cs, y_cost_all, U_cost_all, P_cost_all, exp_info, cost_inds,
 cost_inds_set = NMRCalibrate.prepareoptim(cs_config_path, molecule_names, hz2ppmfunc,
 U_y, y, As; region_min_dist = 0.1)
@@ -240,8 +263,6 @@ U_y, y, As; region_min_dist = 0.1)
 # visualize cost regions.
 # sort(P_cost_set[1]) # etc..
 P_cost_set = collect( P_y[cost_inds_set[r]] for r = 1:length(cost_inds_set) )
-
-include("./helpers/final_helpers.jl")
 
 
 ### optim all regions. # 900 secs.
