@@ -94,29 +94,40 @@ function updateλ!(As::Vector{NMRSpectraSimulator.CompoundFIDType{T}},
 end
 
 
-function getNλ(A::NMRSpectraSimulator.CompoundFIDType{T}) where T
+function getNλ(A::NMRSpectraSimulator.CompoundFIDType{T,NMRSpectraSimulator.SpinSysFIDType1{T}}) where T
 
     counter_sys = 0
-    for i = 1:length(A.κs_λ)
-        counter_sys += length(A.κs_λ[i])
+    for i = 1:length(A.ss_params.κs_λ)
+        counter_sys += length(A.ss_params.κs_λ[i])
     end
 
     return counter_sys + length(A.κs_λ_singlets)
 end
 
+function getNλ(A::NMRSpectraSimulator.CompoundFIDType{T,NMRSpectraSimulator.SpinSysFIDType2{T}}) where T
+
+    counter_sys = 0
+    for i = 1:length(A.ss_params.κs_λ)
+        for k = 1:length(A.ss_params.κs_λ[i])
+            counter_sys += length(A.ss_params.κs_λ[i])
+        end
+    end
+
+    return counter_sys + length(A.κs_λ_singlets)
+end
 
 #### κ parsing.
 
 
 function countκ(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T}}) where T
-    
+
     N_κ = 0
     N_κ_singlets = 0
     for n = 1:length(Es)
         for i = 1:length(Es[n].κ)
             #for l = 1:length(Es[n].κ[i])
             N_κ += length(Es[n].κ[i])
-                
+
             #end
         end
 

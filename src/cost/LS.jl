@@ -142,7 +142,7 @@ function evaldesignmatrixκ!(B::Matrix{T},
     # loop over each κ partition element in Es.
     for n = 1:N
         A = Es[n]
-        @assert length(A.κ) == length(A.core.qs) == length(A.core.κs_λ) == length(A.core.κs_β) == length(A.core.d)
+        @assert length(A.κ) == length(A.core.qs) == length(A.core.κs_λ) == length(A.core.κs_β) == length(A.core.ss_params.ss_params.d)
 
          # spin system.
         for i = 1:length(A.κ)
@@ -156,25 +156,8 @@ function evaldesignmatrixκ!(B::Matrix{T},
                 for m = 1:M
 
                     # taken from evalitproxysys()
-                    r = 2*π*U[m] - A.core.d[i]
+                    r = 2*π*U[m] - A.core.ss_params.d[i]
                     out = w[n]*A.core.qs[i][k](r, A.core.κs_λ[i], A.core.κs_β[i])
-
-                    #tmp = NMRSpectraSimulator.evalitpproxycompound(U[m], A)
-                    # tmp = one κ partition.
-
-                    # if !isfinite(out)
-                    #     println("eval not finite!")
-                    #     println("U[m] = ", U[m])
-
-                    #     println("n,ik,m = ", (n,i,k,m))
-                    #     println("Es[n].core.d = ", Es[n].core.d)
-                    #     println("Es[n].core.κs_λ = ", Es[n].core.κs_λ)
-                    #     println("Es[n].core.κs_β = ", Es[n].core.κs_β)
-
-                    #     println("Es[n].κ = ", Es[n].κ)
-                    #     println()
-
-                    # end
 
                     B[m,j], B[m+M,j] = real(out), imag(out)
                 end

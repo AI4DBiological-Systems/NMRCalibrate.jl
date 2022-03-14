@@ -31,8 +31,8 @@ p_set = Vector{String}(undef, 0)
 m_set = Vector{Vector{String}}(undef, 0)
 w_set = Vector{Vector{Float64}}(undef, 0)
 
-setupcalibrateserine!(p_set, m_set, w_set)
-#setupcalibrateentries1!(p_set, m_set, w_set)
+#setupcalibrateserine!(p_set, m_set, w_set)
+setupcalibrateentries1!(p_set, m_set, w_set)
 #setupcalibrateentriesNamJan2022!(p_set, m_set, w_set)
 
 projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final"
@@ -48,7 +48,7 @@ function loopscript(p_name_set, m_names_set, w_set,
         w = w_set[i]
 
         calibratesolute(project_name, molecule_names, w;
-            max_iters = max_iters
+            max_iters = max_iters,
             projects_dir = projects_dir,
             base_path_JLD = base_path_JLD,
             cs_config_path = cs_config_path)

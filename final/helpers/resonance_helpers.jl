@@ -47,18 +47,6 @@ function evalitpproxysysresonance(qs::Vector{Vector{Function}},
     return tuple(out...) # type unstable.
 end
 
-# # with proxy.
-# function evalitpproxycompoundresonance(u,
-#     A::NMRSpectraSimulator.CompoundFIDType{T}) where T <: Real
-#
-#     out_sys = evalitpproxysysresonance(A.qs, u, A.d, A.κs_λ, A.κs_β)
-#
-#     out_singlets = evalsingletsresonance(u, A.d_singlets, A.αs_singlets, A.Ωs_singlets,
-#     A.β_singlets, A.λ0, A.κs_λ_singlets)
-#
-#     return out_sys, out_singlets
-# end
-
 function assembleqsevals(z1::NTuple{N, Vector{Complex{T}}}, qs::Vector{Vector{Function}}) where {N,T}
     #
     out_qs = Vector{Vector{Vector{Complex{T}}}}(undef, length(qs))

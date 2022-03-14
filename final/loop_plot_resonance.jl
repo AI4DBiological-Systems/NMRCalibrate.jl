@@ -1,4 +1,4 @@
-
+# not working.
 
 using LinearAlgebra, FFTW
 import BSON, Statistics, Random
@@ -33,11 +33,12 @@ PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "ser
 
 
 
-base_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/"
-project_set = filter(isdir, readdir(base_dir; join=true)) # all dirs in base_dir
+# base_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/"
+# project_set = filter(isdir, readdir(base_dir; join=true)) # all dirs in base_dir
 
-#project_set = Vector{String}(undef, 0)
-#include("./helpers/loop_resonance_entries1.jl")
+project_set = Vector{String}(undef, 0)
+tmp = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/D-(+)-Glucose-NRC-600"
+push!(project_set, tmp)
 
 function loopplotresonance(project_set)
 

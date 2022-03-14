@@ -49,10 +49,10 @@ function runalignment(Δ_shifts::Vector{T},
     @assert length(U_cost) == length(y_cost) == length(LS_inds)
 
     #
-    N_d = sum( length(As[n].d) + length(As[n].d_singlets) for n = 1:length(As) )
+    N_d = sum( length(As[n].ss_params.d) + length(As[n].d_singlets) for n = 1:length(As) )
     N_β = sum( getNβ(As[n]) for n = 1:length(As) )
     N_λ = sum( getNλ(As[n]) for n = 1:length(As) )
-    #N_vars = N_d + N_β + N_λ
+    # N_vars = N_d + N_β + N_λ
 
     #### initial values.
     # shift_lb = -copy(Δ_shifts)

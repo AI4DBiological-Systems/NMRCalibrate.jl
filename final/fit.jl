@@ -1,4 +1,5 @@
 
+# TODO: move plot resonance to NMRSpectraSimulator
 
 import NMRDataSetup
 import NMRSpectraSimulator
@@ -28,56 +29,43 @@ Random.seed!(25)
 PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "serif"])
 
 
+#max_iters = 50000
+max_iters = 50000
 
-# path to the GISSMO Julia storage folder.
-#cs_config_path = "/home/roy/MEGAsync/inputs/NMR/configs/reduced_cs_config.txt"
+project_name = "test_glucose"
+molecule_names = ["D-(+)-Glucose";]
+w = [1.0; ]
 
+# project_name = "D-(+)-Glucose-NRC-600"
+# molecule_names = ["D-(+)-Glucose";]
+# w = [1.0; ]
+#
+# project_name = "L-Serine-700"
+# molecule_names = ["L-Serine"; "DSS"]
+# w = [20.0/46; 1.0] # BMRB: DSS is 1 % => 46 mM
+#
 # project_name = "D-(+)-Glucose-700"
 # molecule_names = ["D-(+)-Glucose"; "DSS"]
 # w = [20.0/4.6; 1.0] # BMRB: DSS is 0.1 % => 4.6 mM
-
-project_name = "D-(+)-Glucose-NRC-600"
-molecule_names = ["D-(+)-Glucose";]
-w = [1.0; ]
-max_iters = 50000
+#
+# project_name = "L-Isoleucine-700"
+# molecule_names = ["L-Isoleucine"; "DSS"]
+# w = [20.0/46; 1.0] # BMRB: DSS is 1 % => 46 mM
+#
+# project_name = "L-Leucine-500-2mM"
+# molecule_names = ["L-Leucine";]
+# w = [1.0]
+#
+# project_name = "L-Glutamine-700"
+# molecule_names = ["L-Glutamine"; "DSS"]
+# w = [20.0/0.5; 1.0] # BMRB: DSS is 500 uM => 0.5 mM
 
 projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final"
 base_path_JLD = "/home/roy/Documents/repo/NMRData//src/input/molecules"
 cs_config_path = "/home/roy/Documents/repo/NMRData/src/input/reduced_cs_config.txt"
 
 
-function trydiffΔcradius(Δc_partition_radius_candidates::Vector{T},
-    molecule_names, base_path_JLD, Δcs_max_mixture, hz2ppmfunc, ppm2hzfunc,
-    fs, SW, λ0, ν_0ppm, early_exit_part_size, Δcs_max, tol_coherence,
-    α_relative_threshold) where T <: Real
 
-    @assert early_exit_part_size > 0
-    @assert all(Δc_partition_radius_candidates .> zero(T))
-
-    Δcs_max_mixture = collect( Δcs_max for i = 1:length(molecule_names))
-
-    for Δc_partition_radius in Δc_partition_radius_candidates[1:end-1]
-
-        mixture_params = NMRSpectraSimulator.setupmixtureproxies(molecule_names,
-            base_path_JLD, Δcs_max_mixture, hz2ppmfunc, ppm2hzfunc, fs, SW, λ0, ν_0ppm;
-            tol_coherence = tol_coherence,
-            α_relative_threshold = α_relative_threshold,
-            Δc_partition_radius = Δc_partition_radius)
-        As = mixture_params
-
-        if all( all(NMRCalibrate.displaypartitionsizes(As[n]) .<= early_exit_part_size) for n = 1:length(As) )
-            return mixture_params, Δc_partition_radius
-        end
-    end
-
-    mixture_params = NMRSpectraSimulator.setupmixtureproxies(molecule_names,
-    base_path_JLD, Δcs_max_mixture, hz2ppmfunc, ppm2hzfunc, fs, SW, λ0, ν_0ppm;
-    tol_coherence = tol_coherence,
-    α_relative_threshold = α_relative_threshold,
-    Δc_partition_radius = Δc_partition_radius_candidates[end])
-
-    return mixture_params, Δc_partition_radius_candidates[end]
-end
 
 println("Now on $(project_name)")
 
@@ -91,59 +79,6 @@ PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "ser
 # 0.1% DSS is 0.0046 M = 4.6 mM.
 save_folder_path = joinpath(projects_dir, project_name)
 #@assert 1==2
-
-#### TODO: load from project name, molecule_names, w from BSON files.
-# find a story to write about.
-
-# ## reboot. #######
-# project_name = "D-(+)-Glucose-700"
-# molecule_names = ["D-(+)-Glucose"; "DSS"]
-# w = [20.0/4.6; 1.0] # BMRB: DSS is 0.1 % => 4.6 mM
-
-# project_name = "D-(+)-Glucose-NRC-600"
-# molecule_names = ["D-(+)-Glucose";]
-# w = [1.0; ]
-
-# project_name = "L-Phenylalanine-700"
-# molecule_names = ["L-Phenylalanine"; "DSS"]
-# w = [20/0.5; 1.0] # BMRB-700 phenylalanine: DSS is 500 micro M.
-
-# project_name = "L-Glutamine-700"
-# molecule_names = ["L-Glutamine"; "DSS"]
-# w = [20.0/0.5; 1.0] # BMRB: DSS is 500 uM => 0.5 mM
-
-# project_name = "L-Glutamic acid-700"
-# molecule_names = ["L-Glutamic acid"; "DSS"]
-# w = [20.0/4.6; 1.0] # BMRB: DSS is 0.1% => 4.6 mM
-
-# project_name = "L-Histidine-700"
-# molecule_names = ["L-Histidine"; "DSS"]
-# w = [20.0/46; 1.0] # BMRB: DSS is 1 % => 46 mM
-#
-# project_name = "L-Isoleucine-700"
-# molecule_names = ["L-Isoleucine"; "DSS"]
-# w = [20.0/46; 1.0] # BMRB: DSS is 1 % => 46 mM
-
-# project_name = "L-Serine-700"
-# molecule_names = ["L-Serine"; "DSS"]
-# w = [20.0/46; 1.0] # BMRB: DSS is 1 % => 46 mM
-#
-#
-# project_name = "L-Alanine-700"
-# molecule_names = ["L-Alanine"; "DSS"]
-# w = [20.0/0.5; 1.0] # BMRB: DSS is 500uM => 0.5 mM
-#
-# project_name = "L-Threonine-700"
-# molecule_names = ["L-Threonine"; "DSS"]
-# w = [20.0/0.5; 1.0] # BMRB: DSS is 500uM => 0.5 mM
-#
-# project_name = "L-Tryptophan-700"
-# molecule_names = ["L-Tryptophan"; "DSS"]
-# w = [20.0/0.5; 1.0] # BMRB: DSS is 500uM => 0.5 mM
-#
-# project_name = "L-Valine-700"
-# molecule_names = ["L-Valine"; "DSS"]
-# w = [20.0/0.5; 1.0] # BMRB: DSS is 500uM => 0.5 mM
 
 w = w ./ norm(w) # since the fit data, y, is normalized.
 
@@ -214,10 +149,13 @@ PyPlot.title("data spectra")
 Δcs_max_mixture = collect( Δcs_max for i = 1:length(molecule_names))
 
 println("Timing: trydiffΔcradius()")
-@time mixture_params, Δc_partition_radius = trydiffΔcradius(Δc_partition_radius_candidates,
+dummy_SSFID = NMRSpectraSimulator.SpinSysFIDType1(0.0)
+@time mixture_params, Δc_partition_radius = NMRCalibrate.trydiffΔcradius(Δc_partition_radius_candidates,
     molecule_names, base_path_JLD, Δcs_max_mixture, hz2ppmfunc, ppm2hzfunc,
-    fs, SW, λ0, ν_0ppm, early_exit_part_size, Δcs_max, tol_coherence, α_relative_threshold)
+    fs, SW, λ0, ν_0ppm, early_exit_part_size, Δcs_max, tol_coherence,
+    α_relative_threshold, dummy_SSFID)
 As = mixture_params
+
 
 
 
@@ -240,7 +178,6 @@ u_max = ppm2hzfunc(ΩS_ppm_sorted[end] + u_offset)
 
 println("Timing: fitproxies!()")
 @time NMRSpectraSimulator.fitproxies!(As;
-#NMRSpectraSimulator.fitproxiessimple!(As;
 κ_λ_lb = κ_λ_lb,
 κ_λ_ub = κ_λ_ub,
 u_min = u_min,
@@ -248,7 +185,7 @@ u_max = u_max,
 Δr = 1.0,
 Δκ_λ = 0.05)
 
-#
+###
 # BSON.bson("/home/roy/MEGAsync/inputs/NMR/debug/test_As.bson",
 # As = As)
 # @assert 1==33
@@ -259,6 +196,7 @@ combinevectors = NMRSpectraSimulator.combinevectors
 Δsys_cs, y_cost_all, U_cost_all, P_cost_all, exp_info, cost_inds,
 cost_inds_set = NMRCalibrate.prepareoptim(cs_config_path, molecule_names, hz2ppmfunc,
 U_y, y, As; region_min_dist = 0.1)
+
 
 # visualize cost regions.
 # sort(P_cost_set[1]) # etc..
@@ -304,7 +242,37 @@ Es = collect( NMRSpectraSimulator.κCompoundFIDType(As[i]) for i = 1:length(As) 
 κ_lb_default = 0.2
 κ_ub_default = 50.0
 
-#@assert 1==2
+# TODO here, change shift delta cs to each group.
+r = 3
+y_cost = y[cost_inds_set[r]]
+U_cost = U_y[cost_inds_set[r]]
+P_cost = P_y[cost_inds_set[r]]
+
+###
+LS_inds = 1:length(U_cost)
+
+println("Timing: runalignment(), r = $(r)")
+@time p_star, q, κ_BLS, getshiftfunc, getβfunc, getλfunc,
+obj_func, N_vars_set = NMRCalibrate.runalignment(Δ_shifts,
+U_cost, y_cost, LS_inds, Es, As, fs, SW;
+max_iters = max_iters,
+xtol_rel = 1e-5,
+ftol_rel = 1e-5,
+w = w,
+κ_lb_default = κ_lb_default,
+κ_ub_default = κ_ub_default,
+λ_each_lb = 0.9,
+λ_each_ub = 1.2)
+
+p_star_set[r] = p_star
+κ_BLS_set[r] = κ_BLS
+proxies_set[r] = q
+
+d_star_set[r] = getshiftfunc(p_star)
+β_star_set[r] = getβfunc(p_star)
+λ_star_set[r] = getλfunc(p_star)
+
+@assert 1==2
 
 ## fit model.
 println("Timing: calibrateregions()")

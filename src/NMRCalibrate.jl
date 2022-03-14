@@ -30,7 +30,7 @@ include("../src/DSP/dsp.jl")
 include("../src/cost/LS.jl")
 include("../src/cost/prep.jl")
 include("../src/cost/updates.jl")
-
+include("../src/front_end.jl")
 
 
 export getwraparoundDFTfreqs

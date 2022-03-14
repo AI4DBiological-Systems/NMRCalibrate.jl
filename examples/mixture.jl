@@ -103,7 +103,7 @@ PyPlot.title("data spectra")
 
 mixture_params = NMRSpectraSimulator.setupmixtureproxies(molecule_names,
     base_path_JLD, Δcs_max_mixture, hz2ppmfunc, ppm2hzfunc, fs, SW, λ0,
-    ν_0ppm;
+    ν_0ppm, dummy_SSFID;
     tol_coherence = tol_coherence,
     α_relative_threshold = α_relative_threshold)
 As = mixture_params
