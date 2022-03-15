@@ -39,9 +39,9 @@ function updatew!(  A::Matrix{T},
     b::Vector{T},
     w::Vector{T},
     U_LS,
-    Es::Vector{NMRSpectraSimulator.CompoundFIDType{T}},
+    Es::Vector{NMRSpectraSimulator.CompoundFIDType{T,SST}},
     w_lower::Vector{T},
-    w_upper::Vector{T}) where T <: Real
+    w_upper::Vector{T}) where {T <: Real, SST}
 
     #@assert size(A) == (length(b), length(αS))
     @assert length(b) == 2*length(U_LS)
@@ -60,7 +60,7 @@ end
 
 function evaldesignmatrixw!(B::Matrix{T},
     U,
-    Es::Vector{NMRSpectraSimulator.CompoundFIDType{T}}) where T <: Real
+    Es::Vector{NMRSpectraSimulator.CompoundFIDType{T,SST}}) where {T <: Real, SST}
 
     #
     M = length(U)
@@ -88,10 +88,10 @@ function updateκ!(  A::Matrix{T},
     b::Vector{T},
     κ::Vector{T},
     U_LS,
-    Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T}},
+    Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T,SST}},
     w::Vector{T},
     κ_lower::Vector{T},
-    κ_upper::Vector{T}) where T <: Real
+    κ_upper::Vector{T}) where {T <: Real,SST}
 
     #@assert size(A) == (length(b), length(αS))
     @assert length(b) == 2*length(U_LS)
@@ -123,8 +123,8 @@ end
 
 function evaldesignmatrixκ!(B::Matrix{T},
     U,
-    Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T}},
-    w::Vector{T}) where T <: Real
+    Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T,SST}},
+    w::Vector{T}) where {T <: Real,SST}
 
     #
     M = length(U)
@@ -142,7 +142,7 @@ function evaldesignmatrixκ!(B::Matrix{T},
     # loop over each κ partition element in Es.
     for n = 1:N
         A = Es[n]
-        @assert length(A.κ) == length(A.core.qs) == length(A.core.κs_λ) == length(A.core.κs_β) == length(A.core.ss_params.ss_params.d)
+        @assert length(A.κ) == length(A.core.qs) == length(A.core.ss_params.κs_λ) == length(A.core.ss_params.κs_β) == length(A.core.ss_params.d)
 
          # spin system.
         for i = 1:length(A.κ)
@@ -157,7 +157,7 @@ function evaldesignmatrixκ!(B::Matrix{T},
 
                     # taken from evalitproxysys()
                     r = 2*π*U[m] - A.core.ss_params.d[i]
-                    out = w[n]*A.core.qs[i][k](r, A.core.κs_λ[i], A.core.κs_β[i])
+                    out = w[n]*A.core.qs[i][k](r, A.core.ss_params.κs_λ[i], A.core.ss_params.κs_β[i])
 
                     B[m,j], B[m+M,j] = real(out), imag(out)
                 end

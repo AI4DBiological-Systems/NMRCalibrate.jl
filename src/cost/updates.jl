@@ -1,22 +1,22 @@
-function updatemixtured!(As::Vector{NMRSpectraSimulator.CompoundFIDType{T}},
+function updatemixtured!(As::Vector{NMRSpectraSimulator.CompoundFIDType{T,SST}},
     p::Vector{T},
     st_ind::Int,
     fs::T,
     SW::T,
     #warp_param_set::Vector{Piecewise2DLineType{T}},
-    Δ_shifts::Vector{T})::Int where T <: Real
+    Δ_shifts::Vector{T})::Int where {T <: Real, SST}
 
     #@assert length(warp_param_set) == length(Δ_shifts)
 
     j = st_ind - 1
 
     for n = 1:length(As)
-        for i = 1:length(As[n].d)
+        for i = 1:length(As[n].ss_params.d)
             j += 1
 
             #p2 = p[j]*0.05 #*Δ_shifts[j]
             p2 = p[j]*Δ_shifts[j]
-            As[n].d[i] = convertΔcstoΔω0(p2, fs, SW)
+            As[n].ss_params.d[i] = convertΔcstoΔω0(p2, fs, SW)
         end
 
         for i = 1:length(As[n].d_singlets)
@@ -35,18 +35,18 @@ function convertΔcstoΔω0(x::T, fs::T, SW::T)::T where T
 end
 
 
-function updateβ!(As::Vector{NMRSpectraSimulator.CompoundFIDType{T}},
+function updateβ!(As::Vector{NMRSpectraSimulator.CompoundFIDType{T,SST}},
     p::Vector{T},
-    st_ind::Int)::Int where T <: Real
+    st_ind::Int)::Int where {T <: Real, SST}
 
     j = st_ind - 1
 
     for n = 1:length(As)
-        for i = 1:length(As[n].κs_β)
-            for l = 1:length(As[n].κs_β[i])
+        for i = 1:length(As[n].ss_params.κs_β)
+            for l = 1:length(As[n].ss_params.κs_β[i])
                 j += 1
 
-                As[n].κs_β[i][l] = p[j]
+                As[n].ss_params.κs_β[i][l] = p[j]
             end
         end
 
@@ -60,27 +60,27 @@ function updateβ!(As::Vector{NMRSpectraSimulator.CompoundFIDType{T}},
     return j
 end
 
-function getNβ(A::NMRSpectraSimulator.CompoundFIDType{T}) where T
+function getNβ(A::NMRSpectraSimulator.CompoundFIDType{T,SST}) where {T,SST}
 
     counter_sys = 0
-    for i = 1:length(A.κs_β)
-        counter_sys += length(A.κs_β[i])
+    for i = 1:length(A.ss_params.κs_β)
+        counter_sys += length(A.ss_params.κs_β[i])
     end
 
     return counter_sys + length(A.β_singlets)
 end
 
-function updateλ!(As::Vector{NMRSpectraSimulator.CompoundFIDType{T}},
+function updateλ!(As::Vector{NMRSpectraSimulator.CompoundFIDType{T,SST}},
     p::Vector{T},
-    st_ind::Int)::Int where T <: Real
+    st_ind::Int)::Int where {T <: Real, SST}
 
     j = st_ind - 1
 
     for n = 1:length(As)
-        for i = 1:length(As[n].κs_λ)
+        for i = 1:length(As[n].ss_params.κs_λ)
 
             j += 1
-            As[n].κs_λ[i] = p[j]
+            As[n].ss_params.κs_λ[i] = p[j]
         end
 
         for i = 1:length(As[n].κs_λ_singlets)
@@ -119,7 +119,7 @@ end
 #### κ parsing.
 
 
-function countκ(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T}}) where T
+function countκ(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T,SST}}) where {T,SST}
 
     N_κ = 0
     N_κ_singlets = 0
@@ -137,8 +137,8 @@ function countκ(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T}}) where T
     return N_κ, N_κ_singlets
 end
 
-function parseκ!(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T}},
-    κ_vec::Vector{T}) where T
+function parseκ!(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T,SST}},
+    κ_vec::Vector{T}) where {T,SST}
 
     @assert length(κ_vec) == sum(countκ(Es))
 
@@ -160,7 +160,7 @@ function parseκ!(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T}},
     return j
 end
 
-function resetκ!(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T}}) where T
+function resetκ!(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T,SST}}) where {T,SST}
 
     j = 0
     for n = 1:length(Es)

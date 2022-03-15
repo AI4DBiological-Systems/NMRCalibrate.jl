@@ -125,7 +125,7 @@ function graphall(dict, Δ_shifts, Es, y, U_y, P_y, fs, SW::T,
         ### reference.
 
         # reference, zero shift, phase.
-        N_d = sum( length(As[n].d) + length(As[n].d_singlets) for n = 1:length(As) )
+        N_d = sum( length(As[n].ss_params.d) + length(As[n].d_singlets) for n = 1:length(As) )
         N_β = sum( NMRCalibrate.getNβ(As[n]) for n = 1:length(As) )
         N_λ = sum( NMRCalibrate.getNλ(As[n]) for n = 1:length(As) )
         shift_initial = zeros(T, N_d)

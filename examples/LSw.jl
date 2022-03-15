@@ -112,13 +112,6 @@ NMRSpectraSimulator.fitproxies!(As;
 
 ### plot.
 
-# # purposely distort the spectra by setting non-autophased FID values.
-# Ag = As[1]
-# Ag.d = rand(length(Ag.d))
-# Ag.κs_λ = rand(length(Ag.κs_λ)) .+ 1
-# Ag.κs_β = collect( rand(length(Ag.κs_β[i])) .* (2*π) for i = 1:length(Ag.κs_β) )
-
-
 
 f = uu->NMRSpectraSimulator.evalmixture(uu, mixture_params)
 
@@ -133,7 +126,7 @@ P = LinRange(hz2ppmfunc(u_min), hz2ppmfunc(u_max), 50000)
 U = ppm2hzfunc.(P)
 
 ## parameters that affect qs.
-# A.d, A.κs_λ, A.κs_β
+# A.ss_params.d, A.ss_params.κs_λ, A.ss_params.κs_β
 # A.d_singlets, A.αs_singlets, A.Ωs_singlets, A.β_singlets, A.λ0, A.κs_λ_singlets
 q = uu->NMRSpectraSimulator.evalitpproxymixture(uu, mixture_params)
 
@@ -175,7 +168,6 @@ updatedfunc = pp->NMRCalibrate.updatemixtured!(Bs, pp, st_ind, fs, SW, Δ_shifts
 
 st_ind_β = N_d + 1
 updateβfunc = pp->NMRCalibrate.updateβ!(Bs, pp, st_ind_β)
-#N_β = sum( sum(length(Bs[n].κs_β[l]) for l = 1:length(Bs[n].κs_β)) + length(Bs[n].β_singlets) for n = 1:length(Bs) )
 N_β = sum( NMRCalibrate.getNβ(Bs[n]) for n = 1:length(Bs) )
 NMRCalibrate.getNβ(Bs[1])
 

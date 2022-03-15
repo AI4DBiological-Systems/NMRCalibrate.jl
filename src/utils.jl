@@ -1,5 +1,5 @@
 
-function displaypartitionsizes(A::NMRSpectraSimulator.CompoundFIDType{T}) where T
+function displaypartitionsizes(A::NMRSpectraSimulator.CompoundFIDType{T,SST}) where {T,SST}
     #
     return collect( length(A.part_inds_compound[k]) for k = 1:length(A.part_inds_compound) )
 end
@@ -9,7 +9,7 @@ function forcesymmetric(A::Matrix{T})::Matrix{T} where T <: Real
 end
 
 # average Δc vector for each partition element.
-function viewaverageΔc(A::NMRSpectraSimulator.CompoundFIDType{T}) where T
+function viewaverageΔc(A::NMRSpectraSimulator.CompoundFIDType{T,SST}) where {T,SST}
 
     N_spin_groups = length(A.part_inds_compound)
     out = Vector{Vector{Vector{T}}}(undef, N_spin_groups)
@@ -19,7 +19,6 @@ function viewaverageΔc(A::NMRSpectraSimulator.CompoundFIDType{T}) where T
         part_size = length(A.part_inds_compound[i])
 
         out[i] = Vector{Vector{T}}(undef, part_size)
-
 
         for (k,inds) in enumerate(A.part_inds_compound[i])
 
@@ -59,8 +58,8 @@ function findfreqrange(As::Vector{NMRSpectraSimulator.CompoundFIDType{T,SST}}, h
 end
 
 
-function setupcostcLshiftLS(Es,
-    Bs,
+function setupcostcLshiftLS(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, SST}},
+    Bs::Vector{NMRSpectraSimulator.CompoundFIDType{T, SST}},
     fs::T,
     SW::T,
     LS_inds,
@@ -69,7 +68,7 @@ function setupcostcLshiftLS(Es,
     Δ_shifts::Vector{T};
     w = ones(T, length(Es)),
     κ_lb_default = 0.2,
-    κ_ub_default = 5.0) where T <: Real
+    κ_ub_default = 5.0) where {T <: Real, SST}
 
     #N = length(ΩS0)
     #@assert length(ΩS0) == length(αS) == length(w_lb) == length(w_ub)
@@ -85,7 +84,7 @@ function setupcostcLshiftLS(Es,
     f = uu->NMRSpectraSimulator.evalitpproxymixture(uu, Es; w = w)
 
     ##### update functions.
-    N_d = sum( length(Bs[n].d) + length(Bs[n].d_singlets) for n = 1:length(Bs) )
+    N_d = sum( length(Bs[n].ss_params.d) + length(Bs[n].d_singlets) for n = 1:length(Bs) )
     N_β = sum( getNβ(Bs[n]) for n = 1:length(Bs) )
     N_λ = sum( getNλ(Bs[n]) for n = 1:length(Bs) )
 
@@ -96,7 +95,6 @@ function setupcostcLshiftLS(Es,
     st_ind_β = fin_ind_d + 1
     fin_ind_β = st_ind_β + N_β - 1
     updateβfunc = pp->updateβ!(Bs, pp, st_ind_β)
-    #N_β = sum( sum(length(Bs[n].κs_β[l]) for l = 1:length(Bs[n].κs_β)) + length(Bs[n].β_singlets) for n = 1:length(Bs) )
 
     #λupdate.
     st_ind_λ = fin_ind_β + 1

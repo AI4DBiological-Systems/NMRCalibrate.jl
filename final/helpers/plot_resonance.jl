@@ -90,13 +90,13 @@ function plotresonancegroups(projects_dir)
     U = ppm2hzfunc.(P)
 
     ## parameters that affect qs.
-    # A.d, A.κs_λ, A.κs_β
+    # A.ss_params.d, A.ss_params.κs_λ, A.ss_params.κs_β
     # A.d_singlets, A.αs_singlets, A.Ωs_singlets, A.β_singlets, A.λ0, A.κs_λ_singlets
     q = uu->NMRSpectraSimulator.evalitpproxymixture(uu, As)
 
     #g = uu->evalitpproxycompoundresonance(uu, As[1])
     A = As[1]
-    g1 = uu->evalitpproxysysresonance(A.qs, uu, A.ss_params.d, A.κs_λ, A.κs_β)
+    g1 = uu->evalitpproxysysresonance(A.qs, uu, A.ss_params.d, A.ss_params.κs_λ, A.ss_params.κs_β)
     g2 = uu->evalsingletsresonance(uu, A.d_singlets, A.αs_singlets, A.Ωs_singlets,
     A.β_singlets, A.λ0, A.κs_λ_singlets)
 

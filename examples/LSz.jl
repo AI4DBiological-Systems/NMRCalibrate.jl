@@ -128,7 +128,7 @@ w = ones(length(As))
 
 
 ## parameters that affect qs.
-# A.d, A.κs_λ, A.κs_β
+# A.ss_params.d, A.ss_params.κs_λ, A.ss_params.κs_β
 # A.d_singlets, A.αs_singlets, A.Ωs_singlets, A.β_singlets, A.λ0, A.κs_λ_singlets
 # purposely perturb κ.
 
@@ -188,7 +188,6 @@ updatedfunc = pp->NMRCalibrate.updatemixtured!(Bs, pp, st_ind, fs, SW, Δ_shifts
 
 st_ind_β = N_d + 1
 updateβfunc = pp->NMRCalibrate.updateβ!(Bs, pp, st_ind_β)
-#N_β = sum( sum(length(Bs[n].κs_β[l]) for l = 1:length(Bs[n].κs_β)) + length(Bs[n].β_singlets) for n = 1:length(Bs) )
 N_β = sum( NMRCalibrate.getNβ(Bs[n]) for n = 1:length(Bs) )
 
 # λupdate.

@@ -186,7 +186,7 @@ f = uu->NMRSpectraSimulator.evalmixture(uu, mixture_params)
 U_LS = U
 
 ## parameters that affect qs.
-# A.d, A.κs_λ, A.κs_β
+# A.ss_params.d, A.ss_params.κs_λ, A.ss_params.κs_β
 # A.d_singlets, A.αs_singlets, A.Ωs_singlets, A.β_singlets, A.λ0, A.κs_λ_singlets
 # purposely perturb κ.
 
