@@ -181,7 +181,7 @@ N_shifts = sum( length(Bs[n].d) + length(Bs[n].d_singlets) for n = 1:length(Bs) 
 # w_ub = ones(1) .* 1000.0
 # end manual.
 
-N_d = sum( length(Bs[n].d) + length(Bs[n].d_singlets) for n = 1:length(Bs) )
+N_d = sum( getNd(Bs[n]) for n = 1:length(Bs) )
 
 st_ind = 1
 updatedfunc = pp->NMRCalibrate.updatemixtured!(Bs, pp, st_ind, fs, SW, Δ_shifts)

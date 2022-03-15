@@ -1,10 +1,10 @@
-function updatemixtured!(As::Vector{NMRSpectraSimulator.CompoundFIDType{T,SST}},
+function updatemixtured!(As::Vector{NMRSpectraSimulator.CompoundFIDType{T,NMRSpectraSimulator.SpinSysFIDType1{T}}},
     p::Vector{T},
     st_ind::Int,
     fs::T,
     SW::T,
     #warp_param_set::Vector{Piecewise2DLineType{T}},
-    Δ_shifts::Vector{T})::Int where {T <: Real, SST}
+    Δ_shifts::Vector{T})::Int where T <: Real
 
     #@assert length(warp_param_set) == length(Δ_shifts)
 
@@ -34,6 +34,73 @@ function convertΔcstoΔω0(x::T, fs::T, SW::T)::T where T
     return x*2*π*fs/SW
 end
 
+function updatemixtured!(As::Vector{NMRSpectraSimulator.CompoundFIDType{T,NMRSpectraSimulator.SpinSysFIDType2{T}}},
+    p::Vector{T},
+    st_ind::Int,
+    fs::T,
+    SW::T,
+    #warp_param_set::Vector{Piecewise2DLineType{T}},
+    shift_constants::Tuple{Vector{Vector{T}},T})::Int where T <: Real
+
+    Δsys_cs, γ = shift_constants
+    @assert length(Δsys_cs) == length(As)
+
+    j = st_ind - 1
+
+    d_i::T = NaN
+
+    for n = 1:length(As)
+
+        for i = 1:length(As[n].ss_params.d)
+
+            # first.
+            j += 1
+            p2 = p[j]*Δsys_cs[n][i]
+            d_i = convertΔcstoΔω0(p2, fs, SW)
+
+            As[n].ss_params.d[i][1] = d_i
+
+            # rest.
+            for k = 2:length(As[n].ss_params.d[i])
+
+                j += 1
+                As[n].ss_params.d[i][k] = p[j]*γ + d_i
+            end
+        end
+
+        for i = 1:length(As[n].d_singlets)
+            j += 1
+
+            p2 = p[j]*Δ_shifts[j]
+            As[n].d_singlets[i] = convertΔcstoΔω0(p2, fs, SW)
+        end
+    end
+
+    return j
+end
+
+
+function getNd(A)::Int
+
+    counter_sys = 0
+    for i = 1:length(A.ss_params.d)
+        counter_sys += length(A.ss_params.d[i])
+    end
+
+    return counter_sys + length(A.d_singlets)
+end
+
+# function getNd(A::NMRSpectraSimulator.CompoundFIDType{T,NMRSpectraSimulator.SpinSysFIDType2{T}}) where T
+#
+#     counter_sys = 0
+#     for i = 1:length(A.ss_params.d)
+#         for k = 1:length(A.ss_params.d[i])
+#             counter_sys += length(A.ss_params.d[i][k])
+#         end
+#     end
+#
+#     return counter_sys + length(A.d_singlets)
+# end
 
 function updateβ!(As::Vector{NMRSpectraSimulator.CompoundFIDType{T,SST}},
     p::Vector{T},
@@ -70,9 +137,9 @@ function getNβ(A::NMRSpectraSimulator.CompoundFIDType{T,SST}) where {T,SST}
     return counter_sys + length(A.β_singlets)
 end
 
-function updateλ!(As::Vector{NMRSpectraSimulator.CompoundFIDType{T,SST}},
+function updateλ!(As::Vector{NMRSpectraSimulator.CompoundFIDType{T,NMRSpectraSimulator.SpinSysFIDType1{T}}},
     p::Vector{T},
-    st_ind::Int)::Int where {T <: Real, SST}
+    st_ind::Int)::Int where T <: Real
 
     j = st_ind - 1
 
@@ -93,6 +160,50 @@ function updateλ!(As::Vector{NMRSpectraSimulator.CompoundFIDType{T,SST}},
     return j
 end
 
+"""
+use common λ for type2, just to get code going.
+"""
+function updateλ!(As::Vector{NMRSpectraSimulator.CompoundFIDType{T,NMRSpectraSimulator.SpinSysFIDType2{T}}},
+    p::Vector{T},
+    st_ind::Int)::Int where T <: Real
+
+    j = st_ind - 1
+
+    κ_λ_i::T = NaN
+
+    for n = 1:length(As)
+
+        for i = 1:length(As[n].ss_params.κs_λ)
+
+            # first.
+            j += 1
+            κ_λ_i = p[j]
+
+            As[n].ss_params.κs_λ[i][1] = κ_λ_i
+
+            # rest.
+            for k = 2:length(As[n].ss_params.κs_λ[i])
+
+                ### uncommon λ.
+                #j += 1
+                #As[n].ss_params.κs_λ[i][k] = κ_λ_i + p[j]*γ_λ
+                ### end uncommon λ.
+
+                ### common λ
+                As[n].ss_params.κs_λ[i][k] = κ_λ_i
+                ### end common λ
+            end
+        end
+
+        for i = 1:length(As[n].κs_λ_singlets)
+
+            j += 1
+            As[n].κs_λ_singlets[i] = p[j]
+        end
+    end
+
+    return j
+end
 
 function getNλ(A::NMRSpectraSimulator.CompoundFIDType{T,NMRSpectraSimulator.SpinSysFIDType1{T}}) where T
 
@@ -107,10 +218,17 @@ end
 function getNλ(A::NMRSpectraSimulator.CompoundFIDType{T,NMRSpectraSimulator.SpinSysFIDType2{T}}) where T
 
     counter_sys = 0
+
+    ### uncommon λ
+    # for i = 1:length(A.ss_params.κs_λ)
+    #     for k = 1:length(A.ss_params.κs_λ[i])
+    #         counter_sys += length(A.ss_params.κs_λ[i])
+    #     end
+    # end
+
+    ### common λ.
     for i = 1:length(A.ss_params.κs_λ)
-        for k = 1:length(A.ss_params.κs_λ[i])
-            counter_sys += length(A.ss_params.κs_λ[i])
-        end
+        counter_sys += length(A.ss_params.κs_λ[i])
     end
 
     return counter_sys + length(A.κs_λ_singlets)

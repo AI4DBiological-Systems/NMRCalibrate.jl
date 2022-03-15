@@ -27,8 +27,11 @@ function prepareoptim(cs_config_path,
     return Δsys_cs, y_cost, U_cost, P_cost, exp_info, cost_inds, cost_inds_set
 end
 
-
-function runalignment(Δ_shifts::Vector{T},
+"""
+shift_constants can be Δ_shift::Vector{T}, 1:1 correspondance to p_shift, or
+tuple{Δsys_cs, γ} for type2.
+"""
+function runalignment(shift_constants,
     U_cost,
     y_cost::Vector{Complex{T}},
     LS_inds,
@@ -49,16 +52,14 @@ function runalignment(Δ_shifts::Vector{T},
     @assert length(U_cost) == length(y_cost) == length(LS_inds)
 
     #
-    N_d = sum( length(As[n].ss_params.d) + length(As[n].d_singlets) for n = 1:length(As) )
+    N_d = sum( getNd(As[n]) for n = 1:length(As) )
     N_β = sum( getNβ(As[n]) for n = 1:length(As) )
     N_λ = sum( getNλ(As[n]) for n = 1:length(As) )
     # N_vars = N_d + N_β + N_λ
 
     #### initial values.
-    # shift_lb = -copy(Δ_shifts)
-    # shift_ub = copy(Δ_shifts)
-    shift_lb = -ones(T, length(Δ_shifts))
-    shift_ub = ones(T, length(Δ_shifts))
+    shift_lb = -ones(T, N_d)
+    shift_ub = ones(T, N_d)
     shift_initial = zeros(T, N_d)
 
     β_lb = ones(T, N_β) .* (-π)
@@ -81,11 +82,14 @@ function runalignment(Δ_shifts::Vector{T},
     p_initial = [shift_initial; β_initial; λ_initial]
     println("p_lb = ", p_lb)
     println("p_ub = ", p_ub)
+    println("p_initial = ", p_initial)
+    println("length(p_initial) = ", length(p_initial))
+    println()
 
     q, updatedfunc, updateβfunc, updateλfunc, updateκfunc, #updatewfunc,
     κ_BLS, getshiftfunc, getβfunc, getλfunc,
     N_vars_set = setupcostcLshiftLS(Es, As, fs, SW,
-        LS_inds, U_cost, y_cost, Δ_shifts;
+        LS_inds, U_cost, y_cost, shift_constants;
         w = w, κ_lb_default = κ_lb_default, κ_ub_default = κ_ub_default)
     #updatewfunc(p_initial)
     updateκfunc(p_initial)
@@ -131,5 +135,47 @@ function runalignment(Δ_shifts::Vector{T},
     println()
 
     return minx, q, κ_BLS, getshiftfunc, getβfunc, getλfunc,
-        obj_func, N_vars_set
+        obj_func, N_vars_set, p_initial
+end
+
+# function setupshiftbounds(As::Vector{NMRSpectraSimulator.CompoundFIDType{T, NMRSpectraSimulator.SpinSysFIDType2{T}}})::Vector{T} where T
+#
+#     N_d = sum( getNd(As[n]) for n = 1:length(As) )
+#
+#     shift_lb = -ones(T, N_d)
+#     shift_ub = ones(T, N_d)
+#     shift_initial = zeros(T, N_d)
+#
+#     return shift_lb, shift_ub, shift_initial
+# end
+#
+# function setupshiftbounds(shift_constants::Tuple{Vector{Vector{T}},T})::Vector{T} where T
+#
+#     shift_lb = -ones(T, length(Δ_shifts))
+#     shift_ub = ones(T, length(Δ_shifts))
+#     shift_initial = zeros(T, length(Δ_shifts))
+#
+#     return shift_lb, shift_ub, shift_initial
+# end
+
+
+function setupκλbounds(As::Vector{NMRSpectraSimulator.CompoundFIDType{T, NMRSpectraSimulator.SpinSysFIDType2{T}}})::Vector{T} where T
+
+    N_λ = sum( getNλ(As[n]) for n = 1:length(As) )
+
+    κ_λ_lb = -ones(T, N_λ)
+    κ_λ_ub = ones(T, N_λ)
+    κ_λ_initial = zeros(T, N_λ)
+
+    return κ_λ_lb, κ_λ_ub, κ_λ_initial
+end
+
+# TODO I am here.
+function setupκλbounds(κ_λ_constants::Tuple{Vector{Vector{T}},T})::Vector{T} where T
+
+    κ_λ_lb = -ones(T, length(Δ_κ_λs))
+    κ_λ_ub = ones(T, length(Δ_κ_λs))
+    κ_λ_initial = zeros(T, length(Δ_κ_λs))
+
+    return κ_λ_lb, κ_λ_ub, κ_λ_initial
 end

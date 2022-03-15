@@ -65,7 +65,7 @@ function setupcostcLshiftLS(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, 
     LS_inds,
     U0,
     y0::Vector{Complex{T}},
-    Δ_shifts::Vector{T};
+    shift_constants;
     w = ones(T, length(Es)),
     κ_lb_default = 0.2,
     κ_ub_default = 5.0) where {T <: Real, SST}
@@ -84,13 +84,13 @@ function setupcostcLshiftLS(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, 
     f = uu->NMRSpectraSimulator.evalitpproxymixture(uu, Es; w = w)
 
     ##### update functions.
-    N_d = sum( length(Bs[n].ss_params.d) + length(Bs[n].d_singlets) for n = 1:length(Bs) )
+    N_d = sum( getNd(Bs[n]) for n = 1:length(Bs) )
     N_β = sum( getNβ(Bs[n]) for n = 1:length(Bs) )
     N_λ = sum( getNλ(Bs[n]) for n = 1:length(Bs) )
 
     st_ind_d = 1
     fin_ind_d = st_ind_d + N_d - 1
-    updatedfunc = pp->updatemixtured!(Bs, pp, st_ind_d, fs, SW, Δ_shifts)
+    updatedfunc = pp->updatemixtured!(Bs, pp, st_ind_d, fs, SW, shift_constants)
 
     st_ind_β = fin_ind_d + 1
     fin_ind_β = st_ind_β + N_β - 1

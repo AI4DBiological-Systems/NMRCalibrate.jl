@@ -120,11 +120,10 @@ function updateκ!(  A::Matrix{T},
     return status_flag
 end
 
-
 function evaldesignmatrixκ!(B::Matrix{T},
     U,
-    Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T,SST}},
-    w::Vector{T}) where {T <: Real,SST}
+    Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T,NMRSpectraSimulator.SpinSysFIDType1{T}}},
+    w::Vector{T}) where T <: Real
 
     #
     M = length(U)
@@ -142,9 +141,9 @@ function evaldesignmatrixκ!(B::Matrix{T},
     # loop over each κ partition element in Es.
     for n = 1:N
         A = Es[n]
-        @assert length(A.κ) == length(A.core.qs) == length(A.core.ss_params.κs_λ) == length(A.core.ss_params.κs_β) == length(A.core.ss_params.d)
+        @assert length(A.κ) == length(A.core.qs)
 
-         # spin system.
+        # spin system.
         for i = 1:length(A.κ)
 
             # partition
@@ -167,27 +166,86 @@ function evaldesignmatrixκ!(B::Matrix{T},
         # singlets.
         for k = 1:length(A.κ_singlets)
             j += 1
-            #println("singlet: j = ", j)
+
             for m = 1:M
 
                 tmp = w[n]*NMRSpectraSimulator.evalκsinglets(U[m], A.core.d_singlets,
                 A.core.αs_singlets, A.core.Ωs_singlets,
                 A.core.β_singlets, A.core.λ0, A.core.κs_λ_singlets)
 
-                # if !isfinite(tmp)
-                #     println("Es[n].core.d_singlets = ", Es[n].core.d_singlets)
-                #     println("Es[n].core.κs_λ_singlets = ", Es[n].core.κs_λ_singlets)
-                #     println("Es[n].core.β_singlets = ", Es[n].core.β_singlets)
-
-                #     println("Es[n].κ_singlets = ", Es[n].κ_singlets)
-                # end
-
-                # B[m,j] += real(tmp)
-                # B[m+M,j] += imag(tmp)
                 B[m,j] = real(tmp)
                 B[m+M,j] = imag(tmp)
             end
-            #println("B[:,j] = ", B[:,j])
+        end
+
+    end
+
+    ### debug.
+    # #if !all(isfinite.(B))
+    #     JLD.save("debug.jld", "B", B, "j", j)
+    #     #println("B is not finite!")
+    # #end
+
+    return nothing
+end
+
+function evaldesignmatrixκ!(B::Matrix{T},
+    U,
+    Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T,NMRSpectraSimulator.SpinSysFIDType2{T}}},
+    w::Vector{T}) where T <: Real
+
+    #
+    M = length(U)
+    N = length(Es)
+
+    N_κ, N_κ_singlets = countκ(Es)
+    #println((N_κ, N_κ_singlets))
+    #println(size(B))
+    @assert size(B) == (2*M, N_κ + N_κ_singlets)
+    fill!(B, Inf) # debug.
+
+    resetκ!(Es)
+    j = 0
+
+    # loop over each κ partition element in Es.
+    for n = 1:N
+        A = Es[n]
+        @assert length(A.κ) == length(A.core.qs)
+
+        # spin system.
+        for i = 1:length(A.κ)
+
+            # partition
+            for k = 1:length(A.κ[i])
+
+                j += 1
+
+                # loop over each fit position.
+                for m = 1:M
+
+                    # taken from evalitproxysys()
+                    r = 2*π*U[m] - A.core.ss_params.d[i][k]
+                    out = w[n]*A.core.qs[i][k](r, A.core.ss_params.κs_λ[i][k],
+                        A.core.ss_params.κs_β[i])
+
+                    B[m,j], B[m+M,j] = real(out), imag(out)
+                end
+            end
+        end
+
+        # singlets.
+        for k = 1:length(A.κ_singlets)
+            j += 1
+
+            for m = 1:M
+
+                tmp = w[n]*NMRSpectraSimulator.evalκsinglets(U[m], A.core.d_singlets,
+                A.core.αs_singlets, A.core.Ωs_singlets,
+                A.core.β_singlets, A.core.λ0, A.core.κs_λ_singlets)
+
+                B[m,j] = real(tmp)
+                B[m+M,j] = imag(tmp)
+            end
         end
 
     end
