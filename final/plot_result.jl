@@ -28,9 +28,9 @@ PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "ser
 include("./helpers/final_helpers.jl")
 
 #projects_dir = save_folder_path
-#projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/D-(+)-Glucose-NRC-600"
+projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/D-(+)-Glucose-NRC-600"
 #projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/Nam2022_Serine"
-projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/L-Serine-700"
+#projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/L-Serine-700"
 
 ### user inputs.
 # projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final"

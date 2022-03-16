@@ -5,6 +5,9 @@ import BSON, Statistics, PyPlot, Random
 
 import NMRSpectraSimulator
 
+include("../src/NMRCalibrate.jl")
+import .NMRCalibrate
+
 # for loading something with Interpolations.jl
 import OffsetArrays
 import Interpolations
@@ -23,17 +26,19 @@ PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "ser
 
 
 
-projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/D-(+)-Glucose-NRC-600"
-#projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/Nam2022_Serine"
-#project_dit = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/L-Serine-700"
+projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/test_glucose1/"
+r = 3
 
 T = Float64
 
 ### load block.
 #load_path = joinpath(joinpath(projects_dir, project_name), "results_full.bson")
-load_path = joinpath(projects_dir, "results_full.bson")
+load_path = joinpath(projects_dir, "results_$(r).bson")
 dict = BSON.load(load_path)
-As = collect( dict[:As][i] for i = 1:length(dict[:As]) )
+
+Es = collect( dict[:Es][i] for i = 1:length(dict[:Es]) )
+As = collect( Es[n].core for n = 1:length(Es))
+
 Δsys_cs = convert(Vector{Vector{Float64}}, dict[:Δsys_cs])
 y = convert(Vector{Complex{Float64}}, dict[:y])
 U_y = convert(Vector{Float64}, dict[:U_y])
@@ -56,20 +61,21 @@ u_max = ppm2hzfunc(ΩS_ppm_sorted[end] + u_offset)
 P = LinRange(hz2ppmfunc(u_min), hz2ppmfunc(u_max), 50000)
 U = ppm2hzfunc.(P)
 
-p_star_set = dict[:p_star_set]
+p_star = dict[:p_star]
 κ_lb_default = dict[:κ_lb_default]
 κ_ub_default = dict[:κ_ub_default]
-κ_star_set = dict[:κ_star_set]
-d_star_set = dict[:d_star_set]
-β_star_set = dict[:β_star_set]
-λ_star_set = dict[:λ_star_set]
+κ_star = dict[:κ_star]
+d_star = dict[:d_star]
+β_star = dict[:β_star]
+λ_star = dict[:λ_star]
 cost_inds_set = dict[:cost_inds_set]
 w = dict[:w]
 
-As = collect( Es[n].core for n = 1:length(Es))
+
 ### end load block.
 
-r = 3
+Δ_shifts = NMRSpectraSimulator.combinevectors(Δsys_cs)
+
 y_cost = y[cost_inds_set[r]]
 U_cost = U_y[cost_inds_set[r]]
 P_cost = P_y[cost_inds_set[r]]
@@ -95,9 +101,41 @@ updatedfunc, updateβfunc, updateλfunc, updateκfunc, pp, Es, κ_BLS, q)
 ### reference.
 
 # reference, zero shift, phase.
-p_test = zeros(sum(N_vars_set))
-initial_cost = obj_func(p_test)
-NMRCalibrate.parseκ!(Es, ones(T, length(κ_BLS)))
+N_d = sum( NMRCalibrate.getNd(As[n]) for n = 1:length(As) )
+N_β = sum( NMRCalibrate.getNβ(As[n]) for n = 1:length(As) )
+N_λ = sum( NMRCalibrate.getNλ(As[n]) for n = 1:length(As) )
+#shift_manual = zeros(T, N_d)
+#β_manual = zeros(T, N_β)
+#λ_manual = ones(T, N_λ)
+
+shift_manual = [-0.08; -0.1]
+β_manual = copy(β_star)
+λ_manual = copy(λ_star)
+
+p_manual = [shift_manual; β_manual; λ_manual]
+
+manual_cost = obj_func(p_manual)
+#NMRCalibrate.parseκ!(Es, ones(T, length(κ_BLS)))
 fill!(w, 1.0)
-q_initial_U = q.(U)
-println("norm(q_initial_U) = ", norm(q_initial_U))
+q_manual_U = q.(U)
+println("norm(q_manual_U) = ", norm(q_manual_U))
+
+# TODO I need to flip the phase a bit more. write optim code for just phase and lambda, given shift.
+
+
+final_cost = obj_func(p_star)
+q_star_U = q.(U)
+
+
+PyPlot.figure(fig_num)
+fig_num += 1
+
+PyPlot.plot(P, real.(q_manual_U), label = "q manual")
+PyPlot.plot(P_y, real.(y), label = "y")
+PyPlot.plot(P, real.(q_star_U), "--", label = "q star")
+#PyPlot.plot(P_cost, real.(y_cost), "x")
+
+PyPlot.legend()
+PyPlot.xlabel("ppm")
+PyPlot.ylabel("real")
+PyPlot.title("r = $(r). data (y) vs. fit vs. manual")

@@ -294,9 +294,9 @@ p_star
 κ_BLS
 q
 
-getshiftfunc(p_star)
-getβfunc(p_star)
-getλfunc(p_star)
+d_star = getshiftfunc(p_star)
+β_star = getβfunc(p_star)
+λ_star = getλfunc(p_star)
 
 
 
@@ -368,32 +368,17 @@ abs.(q_final_U), P, P_cost, abs.(y_cost);
 initial_fit = abs.(q_initial_U))
 
 
-@assert 1==2
 
-## fit model.
-println("Timing: calibrateregions()")
-@time cost_inds_set, p_star_set, κ_BLS_set, d_star_set, β_star_set, λ_star_set,
-proxies_set = calibrateregions(y, U_y, P_y, cost_inds_set,
-Δ_shifts, As, fs, SW, w;
-max_iters = max_iters,
-xtol_rel = 1e-3,
-ftol_rel = 1e-6,
-κ_lb_default = κ_lb_default,
-κ_ub_default = κ_ub_default,
-λ_each_lb = 0.9,
-λ_each_ub = 1.1)
-
-### save block.
-
-save_path = joinpath(save_folder_path, "results_full.bson")
+### save.
+save_path = joinpath(save_folder_path, "results_$(r).bson")
 BSON.bson(save_path,
-p_star_set = p_star_set,
+p_star = p_star,
 κ_lb_default = κ_lb_default,
 κ_ub_default = κ_ub_default,
-κ_star_set = κ_BLS_set,
-d_star_set = d_star_set,
-β_star_set = β_star_set,
-λ_star_set = λ_star_set,
+κ_star = κ_BLS,
+d_star = d_star,
+β_star = β_star,
+λ_star = λ_star,
 w = w,
 # proxy setup-related below.
 Δc_partition_radius = Δc_partition_radius,
@@ -406,18 +391,13 @@ tol_coherence = tol_coherence,
 # experiement/cost-related below.
 cost_inds_set = cost_inds_set,
 Δsys_cs = Δsys_cs,
-y_cost_all = y_cost_all,
-U_cost_all = U_cost_all,
-P_cost_all = P_cost_all,
-#exp_info = exp_info,
-cost_inds = cost_inds,
+y_cost = y_cost,
+U_cost = U_cost,
+P_cost = P_cost,
 As = As,
+Es = Es,
 y = y,
 U_y = U_y,
 fs = fs,
 SW = SW,
 ν_0ppm = ν_0ppm)
-## end save block.
-
-
-q_U_set = collect( proxies_set[r].(U) for r = 1:length(proxies_set) )

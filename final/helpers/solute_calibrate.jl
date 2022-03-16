@@ -242,8 +242,8 @@ function calibratesolute(project_name, molecule_names, w;
     proxies_set = calibrateregions(y, U_y, P_y, cost_inds_set,
     Δ_shifts, As, fs, SW, w;
     max_iters = max_iters,
-    xtol_rel = 1e-3,
-    ftol_rel = 1e-6,
+    xtol_rel = 1e-7,
+    ftol_rel = 1e-12,
     κ_lb_default = κ_lb_default,
     κ_ub_default = κ_ub_default,
     λ_each_lb = 0.9,
