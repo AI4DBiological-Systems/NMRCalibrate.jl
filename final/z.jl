@@ -27,6 +27,7 @@ PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "ser
 
 
 projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/test_glucose1/"
+#projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/D-(+)-Glucose-700-r3/"
 r = 3
 
 T = Float64
@@ -130,7 +131,7 @@ q_star_U = q.(U)
 PyPlot.figure(fig_num)
 fig_num += 1
 
-PyPlot.plot(P, real.(q_manual_U), label = "q manual")
+#PyPlot.plot(P, real.(q_manual_U), label = "q manual")
 PyPlot.plot(P_y, real.(y), label = "y")
 PyPlot.plot(P, real.(q_star_U), "--", label = "q star")
 #PyPlot.plot(P_cost, real.(y_cost), "x")
@@ -139,3 +140,61 @@ PyPlot.legend()
 PyPlot.xlabel("ppm")
 PyPlot.ylabel("real")
 PyPlot.title("r = $(r). data (y) vs. fit vs. manual")
+
+
+############# LS fit on manual.
+
+N_d = sum( NMRCalibrate.getNd(As[n]) for n = 1:length(As) )
+N_β = sum( NMRCalibrate.getNβ(As[n]) for n = 1:length(As) )
+N_λ = sum( NMRCalibrate.getNλ(As[n]) for n = 1:length(As) )
+
+st_ind_d = 1
+fin_ind_d = st_ind_d + N_d - 1
+
+st_ind_β = fin_ind_d + 1
+fin_ind_β = st_ind_β + N_β - 1
+
+st_ind_λ = fin_ind_β + 1
+fin_ind_λ = st_ind_λ + N_λ -1
+
+NMRCalibrate.updatemixtured!(As, p_manual, st_ind_d, fs, SW, Δ_shifts)
+
+
+#### the z idea.
+# TODO do the κ idea.
+
+Gs = collect( NMRSpectraSimulator.zCompoundFIDType(As[i]) for i = 1:length(As) )
+
+
+β_lb = ones(T, N_β) .* (-π)
+β_ub = ones(T, N_β) .* (π)
+β_initial = zeros(T, N_β)
+
+
+p_lb = [ β_lb; ]
+p_ub = [ β_ub; ]
+p_initial = [ β_initial; ]
+
+
+
+g, updateβfunc, updatezfunc,
+z_BLS, getβfunc = NMRCalibrate.setupcostβ(Gs, As, LS_inds, U_cost, y_cost)
+
+updatezfunc(0.0)
+NMRCalibrate.parsez!(Gs, z_BLS)
+
+
+g_star_U = g.(U)
+
+
+PyPlot.figure(fig_num)
+fig_num += 1
+
+PyPlot.plot(P, real.(q_manual_U), label = "q manual")
+PyPlot.plot(P_y, real.(y), label = "y")
+PyPlot.plot(P, real.(g_star_U), "--", label = "g star")
+
+PyPlot.legend()
+PyPlot.xlabel("ppm")
+PyPlot.ylabel("real")
+PyPlot.title("r = $(r). data (y) vs. fit vs. g")

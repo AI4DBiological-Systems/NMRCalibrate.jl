@@ -38,8 +38,13 @@ max_iters = 50000
 # molecule_names = ["L-Serine";]
 # w = [1.0; ]
 
+# dummy_SSFID = NMRSpectraSimulator.SpinSysFIDType1(0.0)
+# project_name = "test_glucose1"
+# molecule_names = ["D-(+)-Glucose";]
+# w = [1.0; ]
+
 dummy_SSFID = NMRSpectraSimulator.SpinSysFIDType1(0.0)
-project_name = "test_glucose1"
+project_name = "D-(+)-Glucose-700-r3"
 molecule_names = ["D-(+)-Glucose";]
 w = [1.0; ]
 

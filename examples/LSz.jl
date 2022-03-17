@@ -135,12 +135,12 @@ w = ones(length(As))
 As2 = collect( NMRSpectraSimulator.κCompoundFIDType(As[i]) for i = 1:length(As) )
 
 Ag = As2[end]
-#Ag.κ = collect( rand(length(Ag.κ[i])) for i = 1:length(Ag.κ) )
-#Ag.κ_singlets = rand(length(Ag.κ_singlets))
-Ag.κ[1][1] = 0.3
-Ag.κ[1][2] = 0.7
-Ag.κ[1][3] = 0.1
-Ag.κ_singlets[1] = 0.4
+#Ag.κs_α = collect( rand(length(Ag.κs_α[i])) for i = 1:length(Ag.κs_α) )
+#Ag.κs_α_singlets = rand(length(Ag.κs_α_singlets))
+Ag.κs_α[1][1] = 0.3
+Ag.κs_α[1][2] = 0.7
+Ag.κs_α[1][3] = 0.1
+Ag.κs_α_singlets[1] = 0.4
 
 # assemble proxy and compare against oracle at locations in U.
 q = uu->NMRSpectraSimulator.evalitpproxymixture(uu, As2; w = w)
@@ -244,12 +244,12 @@ updateλfunc(p_test)
 
 # reset κ.
 Ag = As2[end]
-#Ag.κ = collect( rand(length(Ag.κ[i])) for i = 1:length(Ag.κ) )
-#Ag.κ_singlets = rand(length(Ag.κ_singlets))
-Ag.κ[1][1] = 1.0
-Ag.κ[1][2] = 1.0
-Ag.κ[1][3] = 1.0
-Ag.κ_singlets[1] = 1.0
+#Ag.κs_α = collect( rand(length(Ag.κs_α[i])) for i = 1:length(Ag.κs_α) )
+#Ag.κs_α_singlets = rand(length(Ag.κs_α_singlets))
+Ag.κs_α[1][1] = 1.0
+Ag.κs_α[1][2] = 1.0
+Ag.κs_α[1][3] = 1.0
+Ag.κs_α_singlets[1] = 1.0
 q_U_ref = q.(U)
 
 
@@ -266,16 +266,16 @@ fill!(κ_BLS, 12.0) # reset.
 NMRCalibrate.parseκ!(As2, κ_BLS)
 
 check_sys = collect( As2[i].κ for i = 1:length(As2) )
-check_singlets = collect( As2[i].κ_singlets for i = 1:length(As2) )
+check_singlets = collect( As2[i].κs_α_singlets for i = 1:length(As2) )
 # should be all 12's.
 
 Ag = As2[end]
-#Ag.κ = collect( rand(length(Ag.κ[i])) for i = 1:length(Ag.κ) )
-#Ag.κ_singlets = rand(length(Ag.κ_singlets))
-Ag.κ[1][1] = 2.0
-Ag.κ[1][2] = 0.7
-Ag.κ[1][3] = 1.5
-Ag.κ_singlets[1] = 1.23
+#Ag.κs_α = collect( rand(length(Ag.κs_α[i])) for i = 1:length(Ag.κs_α) )
+#Ag.κs_α_singlets = rand(length(Ag.κs_α_singlets))
+Ag.κs_α[1][1] = 2.0
+Ag.κs_α[1][2] = 0.7
+Ag.κs_α[1][3] = 1.5
+Ag.κs_α_singlets[1] = 1.23
 q_oracle = q.(U)
 
 # least square solve on κ.

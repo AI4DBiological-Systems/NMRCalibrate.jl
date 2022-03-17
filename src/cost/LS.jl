@@ -141,13 +141,13 @@ function evaldesignmatrixκ!(B::Matrix{T},
     # loop over each κ partition element in Es.
     for n = 1:N
         A = Es[n]
-        @assert length(A.κ) == length(A.core.qs)
+        @assert length(A.κs_α) == length(A.core.qs)
 
         # spin system.
-        for i = 1:length(A.κ)
+        for i = 1:length(A.κs_α)
 
             # partition
-            for k = 1:length(A.κ[i])
+            for k = 1:length(A.κs_α[i])
 
                 j += 1
 
@@ -164,7 +164,7 @@ function evaldesignmatrixκ!(B::Matrix{T},
         end
 
         # singlets.
-        for k = 1:length(A.κ_singlets)
+        for k = 1:length(A.κs_α_singlets)
             j += 1
 
             for m = 1:M
@@ -210,13 +210,13 @@ function evaldesignmatrixκ!(B::Matrix{T},
     # loop over each κ partition element in Es.
     for n = 1:N
         A = Es[n]
-        @assert length(A.κ) == length(A.core.qs)
+        @assert length(A.κs_α) == length(A.core.qs)
 
         # spin system.
-        for i = 1:length(A.κ)
+        for i = 1:length(A.κs_α)
 
             # partition
-            for k = 1:length(A.κ[i])
+            for k = 1:length(A.κs_α[i])
 
                 j += 1
 
@@ -234,7 +234,7 @@ function evaldesignmatrixκ!(B::Matrix{T},
         end
 
         # singlets.
-        for k = 1:length(A.κ_singlets)
+        for k = 1:length(A.κs_α_singlets)
             j += 1
 
             for m = 1:M

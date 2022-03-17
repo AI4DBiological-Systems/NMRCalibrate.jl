@@ -1,4 +1,45 @@
 
+
+"""
+setupcostcLshiftLS() for the β parameters.
+restriction of q to only the β and κ_BLS parameters.
+"""
+function setupcostβ(Gs::Vector{NMRSpectraSimulator.zCompoundFIDType{T, SST}},
+    As::Vector{NMRSpectraSimulator.CompoundFIDType{T, SST}},
+    LS_inds,
+    U0,
+    y0::Vector{Complex{T}}) where {T <: Real, SST}
+
+    w = ones(T, length(Gs))
+
+    N_β = sum( getNβ(As[n]) for n = 1:length(As) )
+
+    st_ind_β = 1
+    fin_ind_β = st_ind_β + N_β - 1
+    updateβfunc = pp->updateβ!(As, pp, st_ind_β)
+
+    f = uu->NMRSpectraSimulator.evalitpproxymixture(uu, Gs; w = w)
+
+
+    ### LS κ.
+    U_LS = U0[LS_inds]
+    b_BLS = [real.(y0[LS_inds]); imag.(y0[LS_inds])]
+
+    N_z, N_z_singlets = countz(Gs)
+    N_z_vars = N_z + N_z_singlets
+
+    E_BLS, κ_BLS = setupupdatew(length(U_LS), N_z_vars)
+    z_BLS = Vector{Complex{T}}(undef, length(κ_BLS))
+
+    updatezfunc = xx->updatez!(E_BLS, b_BLS, z_BLS, U_LS, Gs, w)
+
+    #### extract parameters from p.
+    getβfunc = pp->pp[st_ind_β:fin_ind_β]
+
+    return f, updateβfunc, updatezfunc, z_BLS, getβfunc
+end
+
+
 function displaypartitionsizes(A::NMRSpectraSimulator.CompoundFIDType{T,SST}) where {T,SST}
     #
     return collect( length(A.part_inds_compound[k]) for k = 1:length(A.part_inds_compound) )
@@ -59,7 +100,7 @@ end
 
 
 function setupcostcLshiftLS(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, SST}},
-    Bs::Vector{NMRSpectraSimulator.CompoundFIDType{T, SST}},
+    As::Vector{NMRSpectraSimulator.CompoundFIDType{T, SST}},
     fs::T,
     SW::T,
     LS_inds,
@@ -84,22 +125,22 @@ function setupcostcLshiftLS(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, 
     f = uu->NMRSpectraSimulator.evalitpproxymixture(uu, Es; w = w)
 
     ##### update functions.
-    N_d = sum( getNd(Bs[n]) for n = 1:length(Bs) )
-    N_β = sum( getNβ(Bs[n]) for n = 1:length(Bs) )
-    N_λ = sum( getNλ(Bs[n]) for n = 1:length(Bs) )
+    N_d = sum( getNd(As[n]) for n = 1:length(As) )
+    N_β = sum( getNβ(As[n]) for n = 1:length(As) )
+    N_λ = sum( getNλ(As[n]) for n = 1:length(As) )
 
     st_ind_d = 1
     fin_ind_d = st_ind_d + N_d - 1
-    updatedfunc = pp->updatemixtured!(Bs, pp, st_ind_d, fs, SW, shift_constants)
+    updatedfunc = pp->updatemixtured!(As, pp, st_ind_d, fs, SW, shift_constants)
 
     st_ind_β = fin_ind_d + 1
     fin_ind_β = st_ind_β + N_β - 1
-    updateβfunc = pp->updateβ!(Bs, pp, st_ind_β)
+    updateβfunc = pp->updateβ!(As, pp, st_ind_β)
 
     #λupdate.
     st_ind_λ = fin_ind_β + 1
     fin_ind_λ = st_ind_λ + N_λ -1
-    updateλfunc = pp->updateλ!(Bs, pp, st_ind_λ)
+    updateλfunc = pp->updateλ!(As, pp, st_ind_λ)
 
     N_vars_set = [N_d; N_β; N_λ]
 
