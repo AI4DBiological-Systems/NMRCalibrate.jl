@@ -171,14 +171,9 @@ Gs = collect( NMRSpectraSimulator.zCompoundFIDType(As[i]) for i = 1:length(As) )
 β_initial = zeros(T, N_β)
 
 
-p_lb = [ β_lb; ]
-p_ub = [ β_ub; ]
-p_initial = [ β_initial; ]
-
-
-
+###
 g, updateβfunc, updatezfunc,
-z_BLS, getβfunc = NMRCalibrate.setupcostβ(Gs, As, LS_inds, U_cost, y_cost)
+z_BLS, getβfunc = NMRCalibrate.setupcostβLS(Gs, As, LS_inds, U_cost, y_cost)
 
 updatezfunc(0.0)
 NMRCalibrate.parsez!(Gs, z_BLS)
@@ -186,15 +181,50 @@ NMRCalibrate.parsez!(Gs, z_BLS)
 
 g_star_U = g.(U)
 
+# PyPlot.figure(fig_num)
+# fig_num += 1
+#
+# PyPlot.plot(P, real.(q_manual_U), label = "q manual")
+# PyPlot.plot(P_y, real.(y), label = "y")
+# PyPlot.plot(P, real.(g_star_U), "--", label = "g star")
+#
+# PyPlot.legend()
+# PyPlot.xlabel("ppm")
+# PyPlot.ylabel("real")
+# PyPlot.title("r = $(r). data (y) vs. fit vs. g")
+
+###
+optim_algorithm = :LN_BOBYQA
+#optim_algorithm = :GN_ESCH
+
+
+println("Timing: fitβ")
+@time minx, q2, κ_BLS, getβfunc2,
+obj_func2 = NMRCalibrate.fitβLSκ(U_cost, y_cost, LS_inds, Es, As,
+    β_initial, β_lb, β_ub;
+    optim_algorithm = optim_algorithm,
+    max_iters = 50)
+
+q2_star_U = q2.(U)
 
 PyPlot.figure(fig_num)
 fig_num += 1
 
 PyPlot.plot(P, real.(q_manual_U), label = "q manual")
 PyPlot.plot(P_y, real.(y), label = "y")
+PyPlot.plot(P, real.(q2_star_U), "--", label = "q2 star")
 PyPlot.plot(P, real.(g_star_U), "--", label = "g star")
 
 PyPlot.legend()
 PyPlot.xlabel("ppm")
 PyPlot.ylabel("real")
-PyPlot.title("r = $(r). data (y) vs. fit vs. g")
+PyPlot.title("r = $(r). data (y) vs. fit vs. q")
+
+
+
+# ###### strictly β.
+# N_κ, N_κ_singlets = NMRCalibrate.countκ(Es)
+# N_κ_vars = N_κ + N_κ_singlets
+#
+# NMRCalibrate.parseκ!(Es, ones(N_κ_vars))
+# q3, updateβfunc3, getβfunc3 = setupcostβ(Es, As)

@@ -39,6 +39,7 @@ function runalignment(shift_constants,
     As::Vector{NMRSpectraSimulator.CompoundFIDType{T, SST}},
     fs::T,
     SW::T;
+    optim_algorithm::Symbol = :GN_ESCH,
     max_iters = 5000,
     xtol_rel = 1e-7,
     ftol_rel = 1e-12,
@@ -113,7 +114,7 @@ function runalignment(shift_constants,
     println("obj_func(p_initial) = ", cost_initial)
     println()
 
-    opt = NLopt.Opt(:GN_ESCH, length(p_initial)) # global evolutionary.
+    opt = NLopt.Opt(optim_algorithm, length(p_initial)) # global evolutionary.
 
     minf, minx, ret, numevals = runNLopt!(  opt,
         p_initial,
@@ -138,44 +139,229 @@ function runalignment(shift_constants,
         obj_func, N_vars_set, p_initial
 end
 
-# function setupshiftbounds(As::Vector{NMRSpectraSimulator.CompoundFIDType{T, NMRSpectraSimulator.SpinSysFIDType2{T}}})::Vector{T} where T
-#
-#     N_d = sum( getNd(As[n]) for n = 1:length(As) )
-#
-#     shift_lb = -ones(T, N_d)
-#     shift_ub = ones(T, N_d)
-#     shift_initial = zeros(T, N_d)
-#
-#     return shift_lb, shift_ub, shift_initial
-# end
-#
-# function setupshiftbounds(shift_constants::Tuple{Vector{Vector{T}},T})::Vector{T} where T
-#
-#     shift_lb = -ones(T, length(Δ_shifts))
-#     shift_ub = ones(T, length(Δ_shifts))
-#     shift_initial = zeros(T, length(Δ_shifts))
-#
-#     return shift_lb, shift_ub, shift_initial
-# end
+
+function fitβLSκ(U_cost,
+    y_cost::Vector{Complex{T}},
+    LS_inds,
+    Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, SST}},
+    As::Vector{NMRSpectraSimulator.CompoundFIDType{T, SST}},
+    β_initial::Vector{T},
+    β_lb,
+    β_ub;
+    optim_algorithm::Symbol = :GN_ESCH,
+    max_iters = 5000,
+    xtol_rel = 1e-7,
+    ftol_rel = 1e-12,
+    maxtime = Inf,
+    w = ones(T, length(Es)),
+    κ_lb_default = 0.2,
+    κ_ub_default = 50.0) where {T <: Real, SST}
+
+    @assert length(U_cost) == length(y_cost) == length(LS_inds)
 
 
-function setupκλbounds(As::Vector{NMRSpectraSimulator.CompoundFIDType{T, NMRSpectraSimulator.SpinSysFIDType2{T}}})::Vector{T} where T
+    q, updateβfunc, updateκfunc,
+    κ_BLS, getβfunc = setupcostβLS(Es, As, LS_inds, U_cost, y_cost)
 
+    # updateκfunc(0.0)
+    # NMRCalibrate.parseκ!(Es, κ_BLS)
+    obj_func = pp->costβLS(U_cost, y_cost, updateβfunc, updateκfunc, pp, Es, κ_BLS, q)
+    grad_func = xx->FiniteDiff.finite_difference_gradient(obj_func, xx)
+
+
+    # force eval for debugging.
+    println("Timing: obj_func")
+    @time cost_initial = obj_func(β_initial)
+    cost_initial = obj_func(β_initial)
+    println("obj_func(β_initial) = ", cost_initial)
+    println()
+
+    opt = NLopt.Opt(optim_algorithm, length(β_initial)) # global evolutionary.
+
+    minf, minx, ret, numevals = NMRCalibrate.runNLopt!(  opt,
+        β_initial,
+        obj_func,
+        grad_func,
+        β_lb,
+        β_ub;
+        max_iters = max_iters,
+        xtol_rel = xtol_rel,
+        ftol_rel = ftol_rel,
+        maxtime = maxtime)
+
+    println("Timing: obj_func")
+    @time cost_final = obj_func(minx)
+    println("obj_func(minx) = ", cost_final)
+    println()
+
+    return minx, q, κ_BLS, getβfunc, obj_func
+end
+
+# TODO I am here. try nested optim. inner optim fitβLSκ.
+# try inequality constraints with NLopt.
+# https://nlopt.readthedocs.io/en/latest/NLopt_Algorithms/
+function runalignment2(shift_constants,
+    U_cost,
+    y_cost::Vector{Complex{T}},
+    LS_inds,
+    Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, SST}},
+    As::Vector{NMRSpectraSimulator.CompoundFIDType{T, SST}},
+    fs::T,
+    SW::T;
+    optim_algorithm::Symbol = :GN_ESCH,
+    max_iters = 5000,
+    xtol_rel = 1e-7,
+    ftol_rel = 1e-12,
+    maxtime = Inf,
+    w = ones(T, length(Es)),
+    κ_lb_default = 0.2,
+    κ_ub_default = 50.0,
+    λ_each_lb = 0.7,
+    λ_each_ub = 5.0) where {T <: Real, SST}
+
+    @assert length(U_cost) == length(y_cost) == length(LS_inds)
+
+    #
+    N_d = sum( getNd(As[n]) for n = 1:length(As) )
+    N_β = sum( getNβ(As[n]) for n = 1:length(As) )
     N_λ = sum( getNλ(As[n]) for n = 1:length(As) )
+    # N_vars = N_d + N_β + N_λ
 
-    κ_λ_lb = -ones(T, N_λ)
-    κ_λ_ub = ones(T, N_λ)
-    κ_λ_initial = zeros(T, N_λ)
+    #### initial values.
+    shift_lb = -ones(T, N_d)
+    shift_ub = ones(T, N_d)
+    shift_initial = zeros(T, N_d)
 
-    return κ_λ_lb, κ_λ_ub, κ_λ_initial
+    β_lb = ones(T, N_β) .* (-π)
+    β_ub = ones(T, N_β) .* (π)
+    β_initial = zeros(T, N_β)
+
+    λ_lb = λ_each_lb .* ones(T, N_λ)
+    λ_ub = λ_each_ub .* ones(T, N_λ)
+    λ_initial = ones(T, N_λ)
+
+    ### initial phase estimate. Constant phase model.
+    #β_est = estimateconstantphase(U_cost, y_cost)
+    #βS_base = initializeFIDparameter(αS, β_est)
+    #fill!(β_initial, β_est)
+    #fill!(β_initial, 0.0)
+
+    ### set up.
+    p_lb = [ shift_lb; β_lb; λ_lb ]
+    p_ub = [ shift_ub; β_ub; λ_ub ]
+    p_initial = [shift_initial; β_initial; λ_initial]
+    println("p_lb = ", p_lb)
+    println("p_ub = ", p_ub)
+    println("p_initial = ", p_initial)
+    println("length(p_initial) = ", length(p_initial))
+    println()
+
+    q, updatedfunc, updateβfunc, updateλfunc, updateκfunc, #updatewfunc,
+    κ_BLS, getshiftfunc, getβfunc, getλfunc,
+    N_vars_set = setupcostcLshiftLS(Es, As, fs, SW,
+        LS_inds, U_cost, y_cost, shift_constants;
+        w = w, κ_lb_default = κ_lb_default, κ_ub_default = κ_ub_default)
+    #updatewfunc(p_initial)
+    updateκfunc(p_initial)
+    parseκ!(Es, κ_BLS)
+
+    # TODO: I am here.
+    #q_star = uu->q_star_rad(uu*2*π) # input: Hz.
+
+    ### cost function.
+    #U_cost_rad = U_cost .* (2*π)
+
+    obj_func = pp->costcLshift(U_cost, y_cost,
+    updatedfunc, updateβfunc, updateλfunc, updateκfunc, pp, Es, κ_BLS, q)
+
+    grad_func = xx->FiniteDiff.finite_difference_gradient(obj_func, xx)
+
+    # force eval for debugging.
+    println("Timing: obj_func")
+    @time cost_initial = obj_func(p_initial)
+    cost_initial = obj_func(p_initial)
+    println("obj_func(p_initial) = ", cost_initial)
+    println()
+
+    opt = NLopt.Opt(optim_algorithm, length(p_initial)) # global evolutionary.
+
+    minf, minx, ret, numevals = runNLopt!(  opt,
+        p_initial,
+        obj_func,
+        grad_func,
+        p_lb,
+        p_ub;
+        max_iters = max_iters,
+        xtol_rel = xtol_rel,
+        ftol_rel = ftol_rel,
+        maxtime = maxtime)
+
+    println("numevals = ", numevals)
+    println("norm(p_initial-minx) = ", norm(p_initial-minx))
+
+    println("Timing: obj_func")
+    @time cost_final = obj_func(minx)
+    println("obj_func(minx) = ", cost_final)
+    println()
+
+    return minx, q, κ_BLS, getshiftfunc, getβfunc, getλfunc,
+        obj_func, N_vars_set, p_initial
 end
 
-# TODO I am here.
-function setupκλbounds(κ_λ_constants::Tuple{Vector{Vector{T}},T})::Vector{T} where T
 
-    κ_λ_lb = -ones(T, length(Δ_κ_λs))
-    κ_λ_ub = ones(T, length(Δ_κ_λs))
-    κ_λ_initial = zeros(T, length(Δ_κ_λs))
-
-    return κ_λ_lb, κ_λ_ub, κ_λ_initial
-end
+# function fitβ(U_cost,
+#     y_cost::Vector{Complex{T}},
+#     LS_inds,
+#     Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, SST}},
+#     As::Vector{NMRSpectraSimulator.CompoundFIDType{T, SST}},
+#     β_initial::Vector{T},
+#     β_lb,
+#     β_ub;
+#     optim_algorithm::Symbol = :GN_ESCH,
+#     max_iters = 5000,
+#     xtol_rel = 1e-7,
+#     ftol_rel = 1e-12,
+#     maxtime = Inf,
+#     w = ones(T, length(Es)),
+#     κ_lb_default = 0.2,
+#     κ_ub_default = 50.0) where {T <: Real, SST}
+#
+#     @assert length(U_cost) == length(y_cost) == length(LS_inds)
+#
+#
+#     q, updateβfunc, updateκfunc,
+#     κ_BLS, getβfunc = setupcostβ(Es, As)
+#
+#     # updateκfunc(0.0)
+#     # NMRCalibrate.parseκ!(Es, κ_BLS)
+#     obj_func = pp->costβLS(U_cost, y_cost, updateβfunc, pp, Es, q)
+#     grad_func = xx->FiniteDiff.finite_difference_gradient(obj_func, xx)
+#
+#
+#     # force eval for debugging.
+#     println("Timing: obj_func")
+#     @time cost_initial = obj_func(β_initial)
+#     cost_initial = obj_func(β_initial)
+#     println("obj_func(β_initial) = ", cost_initial)
+#     println()
+#
+#     opt = NLopt.Opt(optim_algorithm, length(β_initial)) # global evolutionary.
+#
+#     minf, minx, ret, numevals = NMRCalibrate.runNLopt!(  opt,
+#         β_initial,
+#         obj_func,
+#         grad_func,
+#         β_lb,
+#         β_ub;
+#         max_iters = max_iters,
+#         xtol_rel = xtol_rel,
+#         ftol_rel = ftol_rel,
+#         maxtime = maxtime)
+#
+#     println("Timing: obj_func")
+#     @time cost_final = obj_func(minx)
+#     println("obj_func(minx) = ", cost_final)
+#     println()
+#
+#     return minx, q, κ_BLS, getβfunc, obj_func
+# end
