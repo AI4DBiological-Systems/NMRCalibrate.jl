@@ -70,12 +70,13 @@ function countz(Gs::Vector{NMRSpectraSimulator.zCompoundFIDType{T,SST}}) where {
     N_z = 0
     N_z_singlets = 0
     for n = 1:length(Gs)
-        for i = 1:length(Gs[n].zs)
-            #for l = 1:length(Gs[n].zs[i])
-            N_z += length(Gs[n].zs[i])
-
-            #end
-        end
+        # for i = 1:length(Gs[n].zs)
+        #     #for l = 1:length(Gs[n].zs[i])
+        #     N_z += length(Gs[n].zs[i])
+        #
+        #     #end
+        # end
+        N_z += sum(length.(Gs[n].zs))
 
         N_z_singlets += length(Gs[n].zs_singlets)
     end

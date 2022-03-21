@@ -47,7 +47,7 @@ function setupcostβLS(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, SST}}
     As::Vector{NMRSpectraSimulator.CompoundFIDType{T, SST}},
     LS_inds,
     U0,
-    y0::Vector{Complex{T}},
+    y0::Vector{Complex{T}};
     κ_lb_default = 0.2,
     κ_ub_default = 5.0) where {T <: Real, SST}
 
@@ -331,6 +331,56 @@ function costcLshift(U,
 
     return cost
 end
+
+function setupβLSsolver(optim_algorithm,
+    Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, SST}},
+    As::Vector{NMRSpectraSimulator.CompoundFIDType{T, SST}},
+    LS_inds,
+    U_cost,
+    y_cost::Vector{Complex{T}};
+    κ_lb_default = 0.2,
+    κ_ub_default = 5.0,
+    max_iters = 50,
+    xtol_rel = 1e-9,
+    ftol_rel = 1e-9,
+    maxtime = Inf) where {T,SST}
+
+    #
+    N_β = sum( getNβ(As[n]) for n = 1:length(As) )
+    β_lb = ones(T, N_β) .* (-π)
+    β_ub = ones(T, N_β) .* (π)
+    #β_initial = zeros(T, N_β)
+
+    p_lb = β_lb
+    p_ub = β_ub
+
+    q, updateβfunc, updateκfunc, κ_BLS,
+    getβfunc = setupcostβLS(Es, As, LS_inds, U_cost, y_cost;
+        κ_lb_default = κ_lb_default,
+        κ_ub_default = κ_ub_default)
+
+    f = pp->costβLS(U_cost, y_cost, updateβfunc, updateκfunc, pp,
+    Es, κ_BLS, q)
+
+    df = xx->FiniteDiff.finite_difference_gradient(f, xx)
+
+    #
+    opt = NLopt.Opt(optim_algorithm, N_β)
+
+    run_optim = pp->runNLopt!(opt,
+        pp,
+        f,
+        df,
+        p_lb,
+        p_ub;
+        max_iters = max_iters,
+        xtol_rel = xtol_rel,
+        ftol_rel = ftol_rel,
+        maxtime = maxtime)
+
+    return run_optim, f, κ_BLS, updateβfunc, q
+end
+
 
 
 

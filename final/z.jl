@@ -171,12 +171,14 @@ Gs = collect( NMRSpectraSimulator.zCompoundFIDType(As[i]) for i = 1:length(As) )
 β_initial = zeros(T, N_β)
 
 
+
 ###
 g, updateβfunc, updatezfunc,
 z_BLS, getβfunc = NMRCalibrate.setupcostβLS(Gs, As, LS_inds, U_cost, y_cost)
 
-updatezfunc(0.0)
-NMRCalibrate.parsez!(Gs, z_BLS)
+println("Timing: updatezfunc() and parsez!()")
+@time updatezfunc(0.0)
+@time NMRCalibrate.parsez!(Gs, z_BLS)
 
 
 g_star_U = g.(U)
@@ -194,18 +196,154 @@ g_star_U = g.(U)
 # PyPlot.title("r = $(r). data (y) vs. fit vs. g")
 
 ###
-optim_algorithm = :LN_BOBYQA
+
+
+function getmeanΔc(Δc_m_compound::Vector{Vector{Vector{T}}},
+    part_inds_compound::Vector{Vector{Vector{Int}}}) where T
+
+    @assert length(part_inds_compound) == length(Δc_m_compound)
+
+    out = Vector{Vector{Vector{T}}}(undef, length(part_inds_compound))
+
+    for i = 1:length(part_inds_compound)
+
+        N_parition_elements = length(part_inds_compound[i])
+        out[i] = Vector{Vector{T}}(undef, N_parition_elements)
+
+        for k = 1:N_parition_elements
+            inds = part_inds_compound[i][k]
+
+            out[i][k] = Statistics.mean(Δc_m_compound[i][inds])
+        end
+    end
+
+    return out
+end
+
+A = As[1]
+Δc_m_compound_avg = getmeanΔc(A.Δc_m_compound, A.part_inds_compound)
+#CNMRSpectraSimulator.combinevectors(Δc_m_compound_avg)
+
+function estimateβ(inds_set::Vector{Vector{Int}},
+    c_all::Vector{Vector{T}},
+    phase_vec::Vector{T};
+    st_ind::Int = 1) where T
+    # loop through As, assemble. Δc matrix.
+    #N_rows = sum( sum( length(As[n].part_inds_compound[i]) for i = 1:length(As[n].part_inds_compound) ) for n = 1:length(As) )
+
+    @assert !isempty(c_all)
+    N_partition_elements = length(inds_set)
+    N_spins = length(c_all[1])
+
+    C = Matrix{T}(undef, N_partition_elements, N_spins)
+    y = Vector{T}(undef, N_partition_elements)
+
+    for k = 1:N_partition_elements
+        inds = inds_set[k]
+
+        C[k,:] = Statistics.mean( c_all[inds] )
+        y[k] = phase_vec[st_ind+k-1]
+    end
+
+    p_β = C\y
+
+    fin_ind = st_ind + N_spins - 1
+
+    return p_β, fin_ind, C, y
+end
+
+# z_flatten is the sum of all partition elements, of all spin groups in mixture.
+# p_β is the sum of all β parameters, which is sum of all spins in each spin group in mixture.
+function getinitialβ!(p_β::Vector{T},
+    z_flatten::Vector{Complex{T}}) where T <: Real
+
+    fill!(p_β, Inf)
+    st_ind = 1
+
+    for n = 1:length(As)
+        A = As[n]
+
+        for i = 1:length(A.part_inds_compound)
+            p_β_i, fin_ind, C, y = estimateβ(A.part_inds_compound[i],
+                A.Δc_m_compound[i], angle.(z_flatten); st_ind = st_ind)
+
+            println("norm(C*p_β_i-y) = ", norm(C*p_β_i-y)) # debug.
+            #@assert length(p_β_i) == length(st_ind:fin_ind)
+            p_β[st_ind:fin_ind] = p_β_i
+            st_ind = fin_ind + 1
+        end
+    end
+
+    return nothing
+end
+
+β_z = similar(β_initial)
+fill!(β_z, Inf)
+getinitialβ!(β_z, z_BLS)
+display([β_z; ])
+clamp!(β_z, -π+1e-5, π -1e-5)
+
+
+#optim_algorithm = :LN_BOBYQA
 #optim_algorithm = :GN_ESCH
 
+# initial guess
 
+optim_algorithm = :LN_BOBYQA # good.
+β0 = copy(β_initial)
+
+optim_algorithm = :GN_ESCH
+β0 = copy(β_initial) # good for 500.
+
+optim_algorithm = :GN_ESCH
+β0 = copy(β_z) # bad for 500, good for 5000.
+
+optim_algorithm = :GN_ISRES
+β0 = copy(β_z) # bad for 500. good for 5000
+
+optim_algorithm = :GN_DIRECT_L
+β0 = copy(β_z) # good for 500.
+
+
+println("optim_algorithm = ", optim_algorithm)
+println("β0 = ", β0)
+
+
+### packaged up.
+run_optim, f, κ_BLS, updateβfunc,
+q3 = NMRCalibrate.setupβLSsolver(optim_algorithm,
+    Es, As, LS_inds, U_cost, y_cost;
+    κ_lb_default = 0.2,
+    κ_ub_default = 5.0,
+    max_iters = 50,
+    xtol_rel = 1e-9,
+    ftol_rel = 1e-9,
+    maxtime = Inf);
+
+println("Timing: run_optim")
+p_β = copy(β0)
+@time minf, minx, ret, N_evals = run_optim(p_β)
+
+
+
+
+# force eval to update q2.
+println("f(minx) = ", f(minx))
+minx1 = copy(minx)
+q3_star_U = q3.(U)
+
+## unpackaged.
 println("Timing: fitβ")
+#β0 = β_initial
 @time minx, q2, κ_BLS, getβfunc2,
 obj_func2 = NMRCalibrate.fitβLSκ(U_cost, y_cost, LS_inds, Es, As,
-    β_initial, β_lb, β_ub;
+    β0, β_lb, β_ub;
     optim_algorithm = optim_algorithm,
-    max_iters = 50)
+    max_iters = 500)
 
 q2_star_U = q2.(U)
+println("norm(q2_star_U-q3_star_U) = ", norm(q2_star_U-q3_star_U))
+println()
 
 PyPlot.figure(fig_num)
 fig_num += 1
@@ -214,6 +352,7 @@ PyPlot.plot(P, real.(q_manual_U), label = "q manual")
 PyPlot.plot(P_y, real.(y), label = "y")
 PyPlot.plot(P, real.(q2_star_U), "--", label = "q2 star")
 PyPlot.plot(P, real.(g_star_U), "--", label = "g star")
+PyPlot.plot(P, real.(q3_star_U), "--", label = "q3 star")
 
 PyPlot.legend()
 PyPlot.xlabel("ppm")
@@ -222,9 +361,17 @@ PyPlot.title("r = $(r). data (y) vs. fit vs. q")
 
 
 
-# ###### strictly β.
-# N_κ, N_κ_singlets = NMRCalibrate.countκ(Es)
-# N_κ_vars = N_κ + N_κ_singlets
-#
-# NMRCalibrate.parseκ!(Es, ones(N_κ_vars))
-# q3, updateβfunc3, getβfunc3 = setupcostβ(Es, As)
+##### make q faster:
+using BenchmarkTools
+
+m = 1
+
+@btime q3(U[m]) # 3 to 4 microsec.
+@btime q2(U[m]) # 3 to 4 microsec.
+@btime q(U[m]) # 3 to 4 microsec.
+
+r0 = 2*π*U[m] - Es[1].core.ss_params.d[1]
+@btime A.qs[1][1](r0)
+
+# TODO have q(r,ξ,bb) use ss_params, to get q(rr) in NMRSpectraSimulator.
+#   see if speed up.

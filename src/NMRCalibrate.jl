@@ -36,6 +36,7 @@ include("../src/cost/multiplier_updates.jl")
 include("../src/cost/prep.jl")
 include("../src/front_end.jl")
 
+include("../src/cost/nested.jl")
 
 export getwraparoundDFTfreqs
 
