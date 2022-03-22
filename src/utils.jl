@@ -262,6 +262,9 @@ function setupcostcLshiftLS(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, 
     κ_lb = ones(N_κ_vars) .* κ_lb_default
     κ_ub = ones(N_κ_vars) .* κ_ub_default
 
+    # debug.
+    println("size(E_BLS) = ", size(E_BLS))
+    # end debug.
 
     b_BLS = [real.(y0[LS_inds]); imag.(y0[LS_inds])]
 

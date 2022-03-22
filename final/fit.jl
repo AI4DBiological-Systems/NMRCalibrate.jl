@@ -127,8 +127,6 @@ fs = dic[:fs]
 SW = dic[:SW]
 ν_0ppm = dic[:ν_0ppm]
 
-# normalize.
-s_t = s_t
 
 hz2ppmfunc = uu->(uu - ν_0ppm)*SW/fs
 ppm2hzfunc = pp->(ν_0ppm + pp*fs/SW)

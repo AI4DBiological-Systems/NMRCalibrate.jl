@@ -39,7 +39,7 @@ function evalitpproxysysresonance(qs::Vector{Vector{Function}},
             #out[i][k] = qs[i][k](r, κs_λ[i], κs_β[i]) # type stable
 
             n += 1
-            out[n] = qs[i][k](r, κs_λ[i], κs_β[i])
+            out[n] = qs[i][k](r, κs_λ[i])
         end
     end
 

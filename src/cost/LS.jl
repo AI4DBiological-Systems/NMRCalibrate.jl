@@ -85,6 +85,7 @@ end
 
 
 function updateκ!(  A::Matrix{T},
+    #r_buffer::Vector{T},
     b::Vector{T},
     κ::Vector{T},
     U_LS,
@@ -96,7 +97,8 @@ function updateκ!(  A::Matrix{T},
     #@assert size(A) == (length(b), length(αS))
     @assert length(b) == 2*length(U_LS)
 
-    evaldesignmatrixκ!(A, U_LS, Es, w)
+    r_buffer = Vector{T}(undef, 0)
+    evaldesignmatrixκ!(A, r_buffer, U_LS, Es, w)
 
     ### LS solve.
     # w[:] = NonNegLeastSquares.nonneg_lsq(A, b; alg = :fnnls)
@@ -120,7 +122,7 @@ function updateκ!(  A::Matrix{T},
     return status_flag
 end
 
-function evaldesignmatrixκ!(B::Matrix{T},
+function evaldesignmatrixκ!(B::Matrix{T}, r_buffer::Vector{T},
     U,
     Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T,NMRSpectraSimulator.SpinSysFIDType1{T}}},
     w::Vector{T}) where T <: Real
@@ -138,6 +140,9 @@ function evaldesignmatrixκ!(B::Matrix{T},
     resetκ!(Es)
     j = 0
 
+    #U_rad = U .* (2*π)
+    #resize!(r_buffer, M)
+
     # loop over each κ partition element in Es.
     for n = 1:N
         A = Es[n]
@@ -145,6 +150,11 @@ function evaldesignmatrixκ!(B::Matrix{T},
 
         # spin system.
         for i = 1:length(A.κs_α)
+
+            # # setup.
+            # for m = 1:M
+            #     r_buffer[m] = 2*π*U[m] - A.core.ss_params.d[i]
+            # end
 
             # partition
             for k = 1:length(A.κs_α[i])
@@ -156,7 +166,10 @@ function evaldesignmatrixκ!(B::Matrix{T},
 
                     # taken from evalitproxysys()
                     r = 2*π*U[m] - A.core.ss_params.d[i]
-                    out = w[n]*A.core.qs[i][k](r, A.core.ss_params.κs_λ[i], A.core.ss_params.κs_β[i])
+                    #r = U_rad[m] - A.core.ss_params.d[i]
+                    #r = r_buffer[m]
+
+                    out = w[n]*A.core.qs[i][k](r, A.core.ss_params.κs_λ[i])
 
                     B[m,j], B[m+M,j] = real(out), imag(out)
                 end
@@ -180,16 +193,10 @@ function evaldesignmatrixκ!(B::Matrix{T},
 
     end
 
-    ### debug.
-    # #if !all(isfinite.(B))
-    #     JLD.save("debug.jld", "B", B, "j", j)
-    #     #println("B is not finite!")
-    # #end
-
     return nothing
 end
 
-function evaldesignmatrixκ!(B::Matrix{T},
+function evaldesignmatrixκ!(B::Matrix{T}, r_buffer_unused::Vector{T},
     U,
     Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T,NMRSpectraSimulator.SpinSysFIDType2{T}}},
     w::Vector{T}) where T <: Real
@@ -206,6 +213,8 @@ function evaldesignmatrixκ!(B::Matrix{T},
 
     resetκ!(Es)
     j = 0
+
+    #resize!(r_buffer, M)
 
     # loop over each κ partition element in Es.
     for n = 1:N
@@ -225,8 +234,7 @@ function evaldesignmatrixκ!(B::Matrix{T},
 
                     # taken from evalitproxysys()
                     r = 2*π*U[m] - A.core.ss_params.d[i][k]
-                    out = w[n]*A.core.qs[i][k](r, A.core.ss_params.κs_λ[i][k],
-                        A.core.ss_params.κs_β[i])
+                    out = w[n]*A.core.qs[i][k](r, A.core.ss_params.κs_λ[i][k])
 
                     B[m,j], B[m+M,j] = real(out), imag(out)
                 end
@@ -249,12 +257,6 @@ function evaldesignmatrixκ!(B::Matrix{T},
         end
 
     end
-
-    ### debug.
-    # #if !all(isfinite.(B))
-    #     JLD.save("debug.jld", "B", B, "j", j)
-    #     #println("B is not finite!")
-    # #end
 
     return nothing
 end

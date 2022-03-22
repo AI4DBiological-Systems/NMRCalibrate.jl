@@ -93,6 +93,38 @@ obj_func = pp->NMRCalibrate.costcLshift(U_cost, y_cost,
 updatedfunc, updateβfunc, updateλfunc, updateκfunc, pp, Es, κ_BLS, q)
 
 
+using BenchmarkTools
+
+
+m = 1
+
+println("Timing: q(U[m])")
+@btime q(U[m])
+
+println("Timing: q.(U_cost)")
+@btime q.(U_cost)
+
+println("Timing: updateκfunc")
+@btime updateκfunc(p_star)
+
+println("Timing: obj_func")
+@btime obj_func(p_star)
+
+# TODO idea: take u_rad instead of u for all evals. rid of 2*π.
+
+println("Timing: evaldesignmatrixκ!")
+r_buffer = Vector{Float64}(undef, 0)
+@btime NMRCalibrate.evaldesignmatrixκ!(Q, r_buffer, U_cost, Es, w);
+
+L = 500
+x = randn(L)
+y = randn(L)
+z = x + im .* y
+
+@btime sum(z-z);
+@btime sum(x-x) + sum(y-y);
+
+@assert 1==2
 
 
 #####
@@ -315,7 +347,7 @@ q3 = NMRCalibrate.setupβLSsolver(optim_algorithm,
     Es, As, LS_inds, U_cost, y_cost;
     κ_lb_default = 0.2,
     κ_ub_default = 5.0,
-    max_iters = 50,
+    max_iters = 500,
     xtol_rel = 1e-9,
     ftol_rel = 1e-9,
     maxtime = Inf);
@@ -323,7 +355,7 @@ q3 = NMRCalibrate.setupβLSsolver(optim_algorithm,
 println("Timing: run_optim")
 p_β = copy(β0)
 @time minf, minx, ret, N_evals = run_optim(p_β)
-
+println()
 
 
 
@@ -361,17 +393,14 @@ PyPlot.title("r = $(r). data (y) vs. fit vs. q")
 
 
 
-##### make q faster:
-using BenchmarkTools
-
-m = 1
-
-@btime q3(U[m]) # 3 to 4 microsec.
-@btime q2(U[m]) # 3 to 4 microsec.
-@btime q(U[m]) # 3 to 4 microsec.
-
-r0 = 2*π*U[m] - Es[1].core.ss_params.d[1]
-@btime A.qs[1][1](r0)
-
-# TODO have q(r,ξ,bb) use ss_params, to get q(rr) in NMRSpectraSimulator.
-#   see if speed up.
+# ##### make q faster:
+# using BenchmarkTools
+#
+# m = 1
+#
+# @btime q3(U[m]) # 3 to 4 microsec.
+# @btime q2(U[m]) # 3 to 4 microsec.
+# @btime q(U[m]) # 3 to 4 microsec.
+#
+# r0 = 2*π*U[m] - Es[1].core.ss_params.d[1]
+# @btime A.qs[1][1](r0, 1.0)
