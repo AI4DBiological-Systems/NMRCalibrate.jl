@@ -61,6 +61,7 @@ u_max = ppm2hzfunc(ΩS_ppm_sorted[end] + u_offset)
 
 P = LinRange(hz2ppmfunc(u_min), hz2ppmfunc(u_max), 50000)
 U = ppm2hzfunc.(P)
+U_rad = U .* (2*π)
 
 p_star = dict[:p_star]
 κ_lb_default = dict[:κ_lb_default]
@@ -81,15 +82,17 @@ y_cost = y[cost_inds_set[r]]
 U_cost = U_y[cost_inds_set[r]]
 P_cost = P_y[cost_inds_set[r]]
 
+U_rad_cost = U_cost .* (2*π)
+
 LS_inds = 1:length(U_cost)
 
 q, updatedfunc, updateβfunc, updateλfunc, updateκfunc,
 κ_BLS, getshiftfunc, getβfunc, getλfunc,
 N_vars_set = NMRCalibrate.setupcostcLshiftLS(Es, As, fs, SW,
-LS_inds, U_cost, y_cost, Δ_shifts;
+LS_inds, U_rad_cost, y_cost, Δ_shifts;
 w = w, κ_lb_default = κ_lb_default, κ_ub_default = κ_ub_default)
 
-obj_func = pp->NMRCalibrate.costcLshift(U_cost, y_cost,
+obj_func = pp->NMRCalibrate.costcLshift(U_rad_cost, y_cost,
 updatedfunc, updateβfunc, updateλfunc, updateκfunc, pp, Es, κ_BLS, q)
 
 
@@ -98,31 +101,61 @@ using BenchmarkTools
 
 m = 1
 
-println("Timing: q(U[m])")
-@btime q(U[m])
-
-println("Timing: q.(U_cost)")
-@btime q.(U_cost)
-
-println("Timing: updateκfunc")
-@btime updateκfunc(p_star)
-
-println("Timing: obj_func")
-@btime obj_func(p_star)
+# println("Timing: q(U[m])")
+# @btime q(U[m])
+#
+# println("Timing: q.(U_cost)")
+# @btime q.(U_cost)
+#
+# println("Timing: updateκfunc")
+# @btime updateκfunc(p_star)
+#
+# println("Timing: obj_func")
+# @btime obj_func(p_star)
 
 # TODO idea: take u_rad instead of u for all evals. rid of 2*π.
+# use complex matrix for LS, then reinterpret for AtA.
+# make new version of solveBLScL()
 
-println("Timing: evaldesignmatrixκ!")
-r_buffer = Vector{Float64}(undef, 0)
-@btime NMRCalibrate.evaldesignmatrixκ!(Q, r_buffer, U_cost, Es, w);
+# need to speed up eval design matrix.
+N_κ, N_κ_singlets = NMRCalibrate.countκ(Es)
 
-L = 500
-x = randn(L)
-y = randn(L)
-z = x + im .* y
+# println("Timing: evaldesignmatrixκ!")
+# C = zeros(Float64, 2*length(U_cost), N_κ + N_κ_singlets)
+# @btime NMRCalibrate.evaldesignmatrixκ!(C, U_rad_cost, Es, w);
 
-@btime sum(z-z);
-@btime sum(x-x) + sum(y-y);
+println("Timing: evaldesignmatrixκ2!")
+Q = zeros(Complex{Float64}, length(U_cost), N_κ + N_κ_singlets)
+@btime NMRCalibrate.evaldesignmatrixκ!(Q, U_rad_cost, Es, w);
+
+# complex to real, imag matrix, interlaced.
+M1 = 5000
+L1 = 50
+W = randn(Complex{Float64}, M1, L1)
+@btime Wr = reinterpret(Float64, W);
+@btime Cr = [real.(W); imag.(W)];
+
+# complex to real,imag array, interlaced.
+V = randn(Complex{Float64}, M1)
+@btime Vr = reinterpret(Float64, V);
+@btime Br = [real.(V); imag.(V)];
+
+Wr = reinterpret(Float64, W)
+Vr = reinterpret(Float64, V)
+@btime Wr'*Vr;
+
+Cr = [real.(W); imag.(W)]
+Br = [real.(V); imag.(V)]
+@btime Cr'*Br;
+
+
+# L = 500
+# x = randn(L)
+# y = randn(L)
+# z = x + im .* y
+#
+# @btime sum(z-z);
+# @btime sum(x-x) + sum(y-y);
 
 @assert 1==2
 
@@ -150,14 +183,14 @@ p_manual = [shift_manual; β_manual; λ_manual]
 manual_cost = obj_func(p_manual)
 #NMRCalibrate.parseκ!(Es, ones(T, length(κ_BLS)))
 fill!(w, 1.0)
-q_manual_U = q.(U)
+q_manual_U = q.(U_rad)
 println("norm(q_manual_U) = ", norm(q_manual_U))
 
 # TODO I need to flip the phase a bit more. write optim code for just phase and lambda, given shift.
 
 
 final_cost = obj_func(p_star)
-q_star_U = q.(U)
+q_star_U = q.(U_rad)
 
 
 PyPlot.figure(fig_num)
@@ -206,14 +239,14 @@ Gs = collect( NMRSpectraSimulator.zCompoundFIDType(As[i]) for i = 1:length(As) )
 
 ###
 g, updateβfunc, updatezfunc,
-z_BLS, getβfunc = NMRCalibrate.setupcostβLS(Gs, As, LS_inds, U_cost, y_cost)
+z_BLS, getβfunc = NMRCalibrate.setupcostβLS(Gs, As, LS_inds, U_rad_cost, y_cost)
 
 println("Timing: updatezfunc() and parsez!()")
 @time updatezfunc(0.0)
 @time NMRCalibrate.parsez!(Gs, z_BLS)
 
 
-g_star_U = g.(U)
+g_star_U = g.(U_rad)
 
 # PyPlot.figure(fig_num)
 # fig_num += 1
@@ -344,7 +377,7 @@ println("β0 = ", β0)
 ### packaged up.
 run_optim, f, κ_BLS, updateβfunc,
 q3 = NMRCalibrate.setupβLSsolver(optim_algorithm,
-    Es, As, LS_inds, U_cost, y_cost;
+    Es, As, LS_inds, U_rad_cost, y_cost;
     κ_lb_default = 0.2,
     κ_ub_default = 5.0,
     max_iters = 500,

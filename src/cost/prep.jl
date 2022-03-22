@@ -32,7 +32,7 @@ shift_constants can be Δ_shift::Vector{T}, 1:1 correspondance to p_shift, or
 tuple{Δsys_cs, γ} for type2.
 """
 function runalignment(shift_constants,
-    U_cost,
+    U_rad_cost,
     y_cost::Vector{Complex{T}},
     LS_inds,
     Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, SST}},
@@ -50,7 +50,7 @@ function runalignment(shift_constants,
     λ_each_lb = 0.7,
     λ_each_ub = 5.0) where {T <: Real, SST}
 
-    @assert length(U_cost) == length(y_cost) == length(LS_inds)
+    @assert length(U_rad_cost) == length(y_cost) == length(LS_inds)
 
     #
     N_d = sum( getNd(As[n]) for n = 1:length(As) )
@@ -90,7 +90,7 @@ function runalignment(shift_constants,
     q, updatedfunc, updateβfunc, updateλfunc, updateκfunc, #updatewfunc,
     κ_BLS, getshiftfunc, getβfunc, getλfunc,
     N_vars_set = setupcostcLshiftLS(Es, As, fs, SW,
-        LS_inds, U_cost, y_cost, shift_constants;
+        LS_inds, U_rad_cost, y_cost, shift_constants;
         w = w, κ_lb_default = κ_lb_default, κ_ub_default = κ_ub_default)
     #updatewfunc(p_initial)
     updateκfunc(p_initial)
@@ -100,9 +100,7 @@ function runalignment(shift_constants,
     #q_star = uu->q_star_rad(uu*2*π) # input: Hz.
 
     ### cost function.
-    #U_cost_rad = U_cost .* (2*π)
-
-    obj_func = pp->costcLshift(U_cost, y_cost,
+    obj_func = pp->costcLshift(U_rad_cost, y_cost,
     updatedfunc, updateβfunc, updateλfunc, updateκfunc, pp, Es, κ_BLS, q)
 
     grad_func = xx->FiniteDiff.finite_difference_gradient(obj_func, xx)
@@ -140,7 +138,7 @@ function runalignment(shift_constants,
 end
 
 
-function fitβLSκ(U_cost,
+function fitβLSκ(U_rad_cost,
     y_cost::Vector{Complex{T}},
     LS_inds,
     Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, SST}},
@@ -160,11 +158,11 @@ function fitβLSκ(U_cost,
     @assert length(U_cost) == length(y_cost) == length(LS_inds)
 
     q, updateβfunc, updateκfunc,
-    κ_BLS, getβfunc = setupcostβLS(Es, As, LS_inds, U_cost, y_cost)
+    κ_BLS, getβfunc = setupcostβLS(Es, As, LS_inds, U_rad_cost, y_cost)
 
     # updateκfunc(0.0)
     # NMRCalibrate.parseκ!(Es, κ_BLS)
-    obj_func = pp->costβLS(U_cost, y_cost, updateβfunc, updateκfunc, pp, Es, κ_BLS, q)
+    obj_func = pp->costβLS(U_rad_cost, y_cost, updateβfunc, updateκfunc, pp, Es, κ_BLS, q)
     grad_func = xx->FiniteDiff.finite_difference_gradient(obj_func, xx)
 
     # force eval for debugging.

@@ -8,7 +8,7 @@ z version.
 function setupcostβLS(Gs::Vector{NMRSpectraSimulator.zCompoundFIDType{T, SST}},
     As::Vector{NMRSpectraSimulator.CompoundFIDType{T, SST}},
     LS_inds,
-    U0,
+    U0_rad,
     y0::Vector{Complex{T}}) where {T <: Real, SST}
 
     w = ones(T, length(Gs))
@@ -23,16 +23,16 @@ function setupcostβLS(Gs::Vector{NMRSpectraSimulator.zCompoundFIDType{T, SST}},
 
 
     ### LS κ.
-    U_LS = U0[LS_inds]
+    U_rad_LS = U0_rad[LS_inds]
     b_BLS = [real.(y0[LS_inds]); imag.(y0[LS_inds])]
 
     N_z, N_z_singlets = countz(Gs)
     N_z_vars = N_z + N_z_singlets
 
-    E_BLS, κ_BLS = setupupdatew(length(U_LS), N_z_vars)
+    E_BLS, κ_BLS = setupupdatew(length(U_rad_LS), N_z_vars)
     z_BLS = Vector{Complex{T}}(undef, length(κ_BLS))
 
-    updatezfunc = xx->updatez!(E_BLS, b_BLS, z_BLS, U_LS, Gs, w)
+    updatezfunc = xx->updatez!(E_BLS, b_BLS, z_BLS, U_rad_LS, Gs, w)
 
     #### extract parameters from p.
     getβfunc = pp->pp[st_ind_β:fin_ind_β]
@@ -46,7 +46,7 @@ end
 function setupcostβLS(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, SST}},
     As::Vector{NMRSpectraSimulator.CompoundFIDType{T, SST}},
     LS_inds,
-    U0,
+    U0_rad,
     y0::Vector{Complex{T}};
     κ_lb_default = 0.2,
     κ_ub_default = 5.0) where {T <: Real, SST}
@@ -63,19 +63,19 @@ function setupcostβLS(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, SST}}
 
 
     ### LS κ.
-    U_LS = U0[LS_inds]
+    U_rad_LS = U0_rad[LS_inds]
     b_BLS = [real.(y0[LS_inds]); imag.(y0[LS_inds])]
 
     N_κ, N_κ_singlets = countκ(Es)
     N_κ_vars = N_κ + N_κ_singlets
 
-    E_BLS, κ_BLS = setupupdatew(length(U_LS), N_κ_vars)
+    E_BLS, κ_BLS = setupupdatew(length(U_rad_LS), N_κ_vars)
 
     κ_lb = ones(N_κ_vars) .* κ_lb_default
     κ_ub = ones(N_κ_vars) .* κ_ub_default
 
     updateκfunc = xx->updateκ!(E_BLS, b_BLS, κ_BLS,
-    U_LS, Es, w, κ_lb, κ_ub)
+    U_rad_LS, Es, w, κ_lb, κ_ub)
 
     #### extract parameters from p.
     getβfunc = pp->pp[st_ind_β:fin_ind_β]
@@ -83,7 +83,7 @@ function setupcostβLS(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, SST}}
     return f, updateβfunc, updateκfunc, κ_BLS, getβfunc
 end
 
-function costβLS(U,
+function costβLS(U_rad,
     S_U::Vector{Complex{T}},
     updateβfunc, updateκfunc,
     p::Vector{T}, Es, κ_BLS,
@@ -98,7 +98,7 @@ function costβLS(U,
     cost = zero(T)
     for m = 1:length(S_U)
 
-        f_u = f(U[m])
+        f_u = f(U_rad[m])
 
         cost += abs2( f_u - S_U[m] )
     end
@@ -128,7 +128,7 @@ function setupcostβ(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, SST}},
     return f, updateβfunc, getβfunc
 end
 
-function costβ(U,
+function costβ(U_rad,
     S_U::Vector{Complex{T}},
     updateβfunc,
     p::Vector{T}, Es,
@@ -140,7 +140,7 @@ function costβ(U,
     cost = zero(T)
     for m = 1:length(S_U)
 
-        f_u = f(U[m])
+        f_u = f(U_rad[m])
 
         cost += abs2( f_u - S_U[m] )
     end
@@ -212,7 +212,7 @@ function setupcostcLshiftLS(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, 
     fs::T,
     SW::T,
     LS_inds,
-    U0,
+    U0_rad,
     y0::Vector{Complex{T}},
     shift_constants;
     w = ones(T, length(Es)),
@@ -253,11 +253,11 @@ function setupcostcLshiftLS(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, 
     N_vars_set = [N_d; N_β; N_λ]
 
     ### LS κ.
-    U_LS = U0[LS_inds]
+    U_rad_LS = U0_rad[LS_inds]
 
     N_κ, N_κ_singlets = countκ(Es)
     N_κ_vars = N_κ + N_κ_singlets
-    E_BLS, κ_BLS = setupupdatew(length(U_LS), N_κ_vars)
+    E_BLS, κ_BLS = setupupdatew(length(U_rad_LS), N_κ_vars)
 
     κ_lb = ones(N_κ_vars) .* κ_lb_default
     κ_ub = ones(N_κ_vars) .* κ_ub_default
@@ -269,7 +269,7 @@ function setupcostcLshiftLS(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, 
     b_BLS = [real.(y0[LS_inds]); imag.(y0[LS_inds])]
 
     updateκfunc = xx->updateκ!(E_BLS, b_BLS, κ_BLS,
-    U_LS, Es, w, κ_lb, κ_ub)
+    U_rad_LS, Es, w, κ_lb, κ_ub)
 
     #### extract parameters from p.
     getshiftfunc = pp->pp[st_ind_d:fin_ind_d]
@@ -298,7 +298,7 @@ function mergeinds(inds_set::Vector{Vector{Int}}, merge_set) where T
 end
 
 
-function costcLshift(U,
+function costcLshift(U_rad,
     S_U::Vector{Complex{T}},
     updatedfunc, updateβfunc, updateλfunc, updateκfunc,
     p::Vector{T}, Es, κ_BLS,
@@ -324,7 +324,7 @@ function costcLshift(U,
     cost = zero(T)
     for m = 1:length(S_U)
 
-        f_u = f(U[m])
+        f_u = f(U_rad[m])
 
         cost += abs2( f_u - S_U[m] )
         #cost += (abs2(f_u) - abs2(S_U[m]))^2
@@ -339,7 +339,7 @@ function setupβLSsolver(optim_algorithm,
     Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, SST}},
     As::Vector{NMRSpectraSimulator.CompoundFIDType{T, SST}},
     LS_inds,
-    U_cost,
+    U_rad_cost,
     y_cost::Vector{Complex{T}};
     κ_lb_default = 0.2,
     κ_ub_default = 5.0,
@@ -358,11 +358,11 @@ function setupβLSsolver(optim_algorithm,
     p_ub = β_ub
 
     q, updateβfunc, updateκfunc, κ_BLS,
-    getβfunc = setupcostβLS(Es, As, LS_inds, U_cost, y_cost;
+    getβfunc = setupcostβLS(Es, As, LS_inds, U_rad_cost, y_cost;
         κ_lb_default = κ_lb_default,
         κ_ub_default = κ_ub_default)
 
-    f = pp->costβLS(U_cost, y_cost, updateβfunc, updateκfunc, pp,
+    f = pp->costβLS(U_rad_cost, y_cost, updateβfunc, updateκfunc, pp,
     Es, κ_BLS, q)
 
     df = xx->FiniteDiff.finite_difference_gradient(f, xx)

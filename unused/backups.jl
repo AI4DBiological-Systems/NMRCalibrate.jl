@@ -1,5 +1,4 @@
 
-
 # just use the real part for LS.
 #yr, yi assumed to have LS_inds applied already.
 # This does A\b but with bounds.
@@ -38,13 +37,13 @@ end
 function updatew!(  A::Matrix{T},
     b::Vector{T},
     w::Vector{T},
-    U_rad_LS,
+    U_LS,
     Es::Vector{NMRSpectraSimulator.CompoundFIDType{T,SST}},
     w_lower::Vector{T},
     w_upper::Vector{T}) where {T <: Real, SST}
 
     #@assert size(A) == (length(b), length(αS))
-    @assert length(b) == 2*length(U_rad_LS)
+    @assert length(b) == 2*length(U_LS)
 
     evaldesignmatrixw!(A, U_LS, Es)
 
@@ -81,27 +80,36 @@ function evaldesignmatrixw!(B::Matrix{T},
     return nothing
 end
 
-######### κ, compensation for α.
-
 
 function updateκ!(  A::Matrix{T},
     #r_buffer::Vector{T},
     b::Vector{T},
     κ::Vector{T},
-    U_rad_LS,
+    U_LS,
     Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T,SST}},
     w::Vector{T},
     κ_lower::Vector{T},
     κ_upper::Vector{T}) where {T <: Real,SST}
 
     #@assert size(A) == (length(b), length(αS))
-    @assert length(b) == 2*length(U_rad_LS)
+    @assert length(b) == 2*length(U_LS)
 
-    evaldesignmatrixκ!(A, U_rad_LS, Es, w)
+    r_buffer = Vector{T}(undef, 0)
+    evaldesignmatrixκ!(A, r_buffer, U_LS, Es, w)
 
     ### LS solve.
     # w[:] = NonNegLeastSquares.nonneg_lsq(A, b; alg = :fnnls)
     # status_flag = true
+
+    # if !all(isfinite.(A))
+    #     println("A is not finite")
+
+    #     JLD.save("debug2.jld", "A", A, "b", b)
+
+    #     # f = jldopen(filename, "r+")
+    #     # write(f, "A", A, "b", b)
+    #     # close(f)
+    # end
 
     κ[:], status_flag = solveBLScL(A, b, κ_lower, κ_upper)
     # κ[:] = A\b
@@ -111,25 +119,26 @@ function updateκ!(  A::Matrix{T},
     return status_flag
 end
 
-
-
 function evaldesignmatrixκ!(B::Matrix{T},
-    U_rad,
+    U,
     Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T,NMRSpectraSimulator.SpinSysFIDType1{T}}},
     w::Vector{T}) where T <: Real
 
     #
-    M = length(U_rad)
+    M = length(U)
     N = length(Es)
 
     N_κ, N_κ_singlets = countκ(Es)
     #println((N_κ, N_κ_singlets))
     #println(size(B))
     @assert size(B) == (2*M, N_κ + N_κ_singlets)
-    #fill!(B, Inf) # debug.
+    fill!(B, Inf) # debug.
 
     resetκ!(Es)
     j = 0
+
+    #U_rad = U .* (2*π)
+    #resize!(r_buffer, M)
 
     # loop over each κ partition element in Es.
     for n = 1:N
@@ -138,6 +147,11 @@ function evaldesignmatrixκ!(B::Matrix{T},
 
         # spin system.
         for i = 1:length(A.κs_α)
+
+            # # setup.
+            # for m = 1:M
+            #     r_buffer[m] = 2*π*U[m] - A.core.ss_params.d[i]
+            # end
 
             # partition
             for k = 1:length(A.κs_α[i])
@@ -148,7 +162,9 @@ function evaldesignmatrixκ!(B::Matrix{T},
                 for m = 1:M
 
                     # taken from evalitproxysys()
-                    r = U_rad[m] - A.core.ss_params.d[i]
+                    r = 2*π*U[m] - A.core.ss_params.d[i]
+                    #r = U_rad[m] - A.core.ss_params.d[i]
+                    #r = r_buffer[m]
 
                     out = w[n]*A.core.qs[i][k](r, A.core.ss_params.κs_λ[i])
 
@@ -163,7 +179,7 @@ function evaldesignmatrixκ!(B::Matrix{T},
 
             for m = 1:M
 
-                tmp = w[n]*NMRSpectraSimulator.evalκsinglets(U_rad[m], A.core.d_singlets,
+                tmp = w[n]*NMRSpectraSimulator.evalκsinglets(U[m], A.core.d_singlets,
                 A.core.αs_singlets, A.core.Ωs_singlets,
                 A.core.β_singlets, A.core.λ0, A.core.κs_λ_singlets)
 
@@ -177,78 +193,13 @@ function evaldesignmatrixκ!(B::Matrix{T},
     return nothing
 end
 
-function evaldesignmatrixκ2!(B::Matrix{Complex{T}},
-    U_rad,
-    Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T,NMRSpectraSimulator.SpinSysFIDType1{T}}},
-    w::Vector{T}) where T <: Real
-
-    #
-    M = length(U_rad)
-    N = length(Es)
-
-    N_κ, N_κ_singlets = countκ(Es)
-    #println((N_κ, N_κ_singlets))
-    #println(size(B))
-    @assert size(B) == (M, N_κ + N_κ_singlets)
-    #fill!(B, Inf) # debug.
-
-    Q = Matrix{Complex{T}}(undef, size(B,2), size(B,1))
-
-    resetκ!(Es)
-    j = 0
-
-    # loop over each κ partition element in Es.
-    for n = 1:N
-        A = Es[n]
-        @assert length(A.κs_α) == length(A.core.qs)
-
-        # spin system.
-        for i = 1:length(A.κs_α)
-
-            # partition
-            for k = 1:length(A.κs_α[i])
-
-                j += 1
-
-                # loop over each fit position.
-                for m = 1:M
-
-                    # taken from evalitproxysys()
-                    r = U_rad[m] - A.core.ss_params.d[i]
-
-                    #B[m,j] = w[n]*A.core.qs[i][k](r, A.core.ss_params.κs_λ[i])
-                    #w[n]*A.core.qs[i][k](r, A.core.ss_params.κs_λ[i])
-                    #B[m,j] = 1.9
-
-                    Q[j,m] = w[n]*A.core.qs[i][k](r, A.core.ss_params.κs_λ[i])
-                end
-            end
-        end
-
-        # singlets.
-        for k = 1:length(A.κs_α_singlets)
-            j += 1
-
-            for m = 1:M
-
-                B[m,j] = w[n]*NMRSpectraSimulator.evalκsinglets(U_rad[m], A.core.d_singlets,
-                A.core.αs_singlets, A.core.Ωs_singlets,
-                A.core.β_singlets, A.core.λ0, A.core.κs_λ_singlets)
-            end
-        end
-
-    end
-
-    return nothing
-end
-
-function evaldesignmatrixκ!(B::Matrix{T},
-    U_rad,
+function evaldesignmatrixκ!(B::Matrix{T}, r_buffer_unused::Vector{T},
+    U,
     Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T,NMRSpectraSimulator.SpinSysFIDType2{T}}},
     w::Vector{T}) where T <: Real
 
     #
-    M = length(U_rad)
+    M = length(U)
     N = length(Es)
 
     N_κ, N_κ_singlets = countκ(Es)
@@ -279,7 +230,7 @@ function evaldesignmatrixκ!(B::Matrix{T},
                 for m = 1:M
 
                     # taken from evalitproxysys()
-                    r = U_rad[m] - A.core.ss_params.d[i][k]
+                    r = 2*π*U[m] - A.core.ss_params.d[i][k]
                     out = w[n]*A.core.qs[i][k](r, A.core.ss_params.κs_λ[i][k])
 
                     B[m,j], B[m+M,j] = real(out), imag(out)
@@ -293,7 +244,7 @@ function evaldesignmatrixκ!(B::Matrix{T},
 
             for m = 1:M
 
-                tmp = w[n]*NMRSpectraSimulator.evalκsinglets(U_rad[m], A.core.d_singlets,
+                tmp = w[n]*NMRSpectraSimulator.evalκsinglets(U[m], A.core.d_singlets,
                 A.core.αs_singlets, A.core.Ωs_singlets,
                 A.core.β_singlets, A.core.λ0, A.core.κs_λ_singlets)
 

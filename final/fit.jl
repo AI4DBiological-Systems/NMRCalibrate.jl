@@ -38,15 +38,15 @@ max_iters = 50000
 # molecule_names = ["L-Serine";]
 # w = [1.0; ]
 
-# dummy_SSFID = NMRSpectraSimulator.SpinSysFIDType1(0.0)
-# project_name = "test_glucose1"
-# molecule_names = ["D-(+)-Glucose";]
-# w = [1.0; ]
-
 dummy_SSFID = NMRSpectraSimulator.SpinSysFIDType1(0.0)
-project_name = "D-(+)-Glucose-700-r3"
+project_name = "test_glucose1"
 molecule_names = ["D-(+)-Glucose";]
 w = [1.0; ]
+
+# dummy_SSFID = NMRSpectraSimulator.SpinSysFIDType1(0.0)
+# project_name = "D-(+)-Glucose-700-r3"
+# molecule_names = ["D-(+)-Glucose";]
+# w = [1.0; ]
 
 # dummy_SSFID = NMRSpectraSimulator.SpinSysFIDType2(0.0)
 # project_name = "test_glucose2"
@@ -240,6 +240,7 @@ PyPlot.title("positions against data spectrum, real part")
 
 P = LinRange(hz2ppmfunc(u_min), hz2ppmfunc(u_max), 50000)
 U = ppm2hzfunc.(P)
+U_rad = U .* (2*π)
 #ΩS_ppm = collect( hz2ppmfunc.( NMRSpectraSimulator.combinevectors(A.Ωs) ./ (2*π) ) for A in mixture_params )
 
 
@@ -277,13 +278,15 @@ y_cost = y[cost_inds_set[r]]
 U_cost = U_y[cost_inds_set[r]]
 P_cost = P_y[cost_inds_set[r]]
 
+U_rad_cost = U_cost .* (2*π)
+
 ###
 LS_inds = 1:length(U_cost)
 
 println("Timing: runalignment(), r = $(r)")
 @time p_star, q, κ_BLS, getshiftfunc, getβfunc, getλfunc,
 obj_func, N_vars_set, p_initial = NMRCalibrate.runalignment(shift_constants,
-U_cost, y_cost, LS_inds, Es, As, fs, SW;
+U_rad_cost, y_cost, LS_inds, Es, As, fs, SW;
 max_iters = max_iters,
 xtol_rel = 1e-5,
 ftol_rel = 1e-5,
@@ -319,11 +322,11 @@ project_title = "test" # TODO change later.
 initial_cost = obj_func(p_initial)
 NMRCalibrate.parseκ!(Es, ones(T, length(κ_BLS)))
 fill!(w, 1.0)
-q_initial_U = q.(U)
+q_initial_U = q.(U_rad)
 #println("norm(q_initial_U) = ", norm(q_initial_U))
 
 final_cost = obj_func(p_star)
-q_final_U = q.(U)
+q_final_U = q.(U_rad)
 
 
 PyPlot.figure(fig_num)

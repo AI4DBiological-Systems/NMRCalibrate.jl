@@ -81,117 +81,66 @@ y_cost = y[cost_inds_set[r]]
 U_cost = U_y[cost_inds_set[r]]
 P_cost = P_y[cost_inds_set[r]]
 
+U_rad_cost = U_cost .* (2*π)
+
 LS_inds = 1:length(U_cost)
-
-q, updatedfunc, updateβfunc, updateλfunc, updateκfunc,
-κ_BLS, getshiftfunc, getβfunc, getλfunc,
-N_vars_set = NMRCalibrate.setupcostcLshiftLS(Es, As, fs, SW,
-LS_inds, U_cost, y_cost, Δ_shifts;
-w = w, κ_lb_default = κ_lb_default, κ_ub_default = κ_ub_default)
-
-obj_func = pp->NMRCalibrate.costcLshift(U_cost, y_cost,
-updatedfunc, updateβfunc, updateλfunc, updateκfunc, pp, Es, κ_BLS, q)
+# need to speed up eval design matrix.
+N_κ, N_κ_singlets = NMRCalibrate.countκ(Es)
 
 
+# q, updatedfunc, updateβfunc, updateλfunc, updateκfunc,
+# κ_BLS, getshiftfunc, getβfunc, getλfunc,
+# N_vars_set = NMRCalibrate.setupcostcLshiftLS(Es, As, fs, SW,
+# LS_inds, U_rad_cost, y_cost, Δ_shifts;
+# w = w, κ_lb_default = κ_lb_default, κ_ub_default = κ_ub_default)
+#
+# obj_func = pp->NMRCalibrate.costcLshift(U_rad_cost, y_cost,
+# updatedfunc, updateβfunc, updateλfunc, updateκfunc, pp, Es, κ_BLS, q)
 
 
-#####
+using BenchmarkTools
 
-### end new.
+println("Timing: evaldesignmatrixκ2!")
+Q = zeros(Complex{Float64}, length(U_cost), N_κ + N_κ_singlets)
+@btime NMRCalibrate.evaldesignmatrixκ2!(Q, U_rad_cost, Es, w);
 
-### reference.
+println("Timing: evaldesignmatrixκ!")
+C = zeros(Float64, 2*length(U_cost), N_κ + N_κ_singlets)
+@btime NMRCalibrate.evaldesignmatrixκ!(C, U_rad_cost, Es, w);
 
-# reference, zero shift, phase.
-N_d = sum( NMRCalibrate.getNd(As[n]) for n = 1:length(As) )
-N_β = sum( NMRCalibrate.getNβ(As[n]) for n = 1:length(As) )
-N_λ = sum( NMRCalibrate.getNλ(As[n]) for n = 1:length(As) )
-#shift_manual = zeros(T, N_d)
-#β_manual = zeros(T, N_β)
-#λ_manual = ones(T, N_λ)
+# println("q.(U_rad_cost)")
+# @btime q.(U_rad_cost);
 
-shift_manual = [-0.08; -0.1]
-β_manual = copy(β_star)
-λ_manual = copy(λ_star)
+# println("obj_func.(p_star)")
+# @btime obj_func.(p_star);
 
-p_manual = [shift_manual; β_manual; λ_manual]
+@assert 5==4
 
-manual_cost = obj_func(p_manual)
-#NMRCalibrate.parseκ!(Es, ones(T, length(κ_BLS)))
-fill!(w, 1.0)
-q_manual_U = q.(U)
-println("norm(q_manual_U) = ", norm(q_manual_U))
+# complex to real, imag matrix, interlaced.
+M1 = 5000
+L1 = 50
+W = randn(Complex{Float64}, M1, L1)
+@btime Wr = reinterpret(Float64, W);
+@btime Cr = [real.(W); imag.(W)];
 
-# TODO I need to flip the phase a bit more. write optim code for just phase and lambda, given shift.
+# complex to real,imag array, interlaced.
+V = randn(Complex{Float64}, M1)
+@btime Vr = reinterpret(Float64, V);
+@btime Br = [real.(V); imag.(V)];
 
+Wr = reinterpret(Float64, W)
+Vr = reinterpret(Float64, V)
+@btime Wr'*Vr;
 
-final_cost = obj_func(p_star)
-q_star_U = q.(U)
-
-
-PyPlot.figure(fig_num)
-fig_num += 1
-
-#PyPlot.plot(P, real.(q_manual_U), label = "q manual")
-PyPlot.plot(P_y, real.(y), label = "y")
-PyPlot.plot(P, real.(q_star_U), "--", label = "q star")
-#PyPlot.plot(P_cost, real.(y_cost), "x")
-
-PyPlot.legend()
-PyPlot.xlabel("ppm")
-PyPlot.ylabel("real")
-PyPlot.title("r = $(r). data (y) vs. fit vs. manual")
+Cr = [real.(W); imag.(W)]
+Br = [real.(V); imag.(V)]
+@btime Cr'*Br;
 
 
-############# LS fit on manual.
-
-N_d = sum( NMRCalibrate.getNd(As[n]) for n = 1:length(As) )
-N_β = sum( NMRCalibrate.getNβ(As[n]) for n = 1:length(As) )
-N_λ = sum( NMRCalibrate.getNλ(As[n]) for n = 1:length(As) )
-
-st_ind_d = 1
-fin_ind_d = st_ind_d + N_d - 1
-
-st_ind_β = fin_ind_d + 1
-fin_ind_β = st_ind_β + N_β - 1
-
-st_ind_λ = fin_ind_β + 1
-fin_ind_λ = st_ind_λ + N_λ -1
-
-NMRCalibrate.updatemixtured!(As, p_manual, st_ind_d, fs, SW, Δ_shifts)
-
-@assert 1==2
-
-###
-optim_algorithm = :LN_BOBYQA
-#optim_algorithm = :GN_ESCH
-
-optim_algorithm = Δ_shifts
-f, updatedfunc, updateλfunc, getshiftfunc, getλfunc,
-N_vars_set = setupcostnestedλd(Es, As, fs, SW, LS_inds, U_cost, y_cost; w = w)
-
-
-
-pp->costnestedλd(U_cost, y_cost, updatedfunc, updateλfunc, pp,
-run_inner_optim, κ_BLS, p_β)
-
-
-println("Timing: fitβ")
-@time minx, q2, κ_BLS, getβfunc2,
-obj_func2 = NMRCalibrate.fitβLSκ(U_cost, y_cost, LS_inds, Es, As,
-    β_initial, β_lb, β_ub;
-    optim_algorithm = optim_algorithm,
-    max_iters = 50)
-
-q2_star_U = q2.(U)
-
-PyPlot.figure(fig_num)
-fig_num += 1
-
-PyPlot.plot(P, real.(q_manual_U), label = "q manual")
-PyPlot.plot(P_y, real.(y), label = "y")
-PyPlot.plot(P, real.(q2_star_U), "--", label = "q2 star")
-
-PyPlot.legend()
-PyPlot.xlabel("ppm")
-PyPlot.ylabel("real")
-PyPlot.title("r = $(r). data (y) vs. fit vs. q")
+# L = 500
+# x = randn(L)
+# y = randn(L)
+# z = x + im .* y
+#
+# @btime sum(z-z);
+# @btime sum(x-x) + sum(y-y);
