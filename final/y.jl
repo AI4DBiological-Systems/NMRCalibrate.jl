@@ -61,6 +61,7 @@ u_max = ppm2hzfunc(ΩS_ppm_sorted[end] + u_offset)
 
 P = LinRange(hz2ppmfunc(u_min), hz2ppmfunc(u_max), 50000)
 U = ppm2hzfunc.(P)
+U_rad = U .* (2*π)
 
 p_star = dict[:p_star]
 κ_lb_default = dict[:κ_lb_default]
@@ -98,76 +99,168 @@ obj_func = pp->NMRCalibrate.costcLshift(U_rad_cost, y_cost,
 updatedfunc, updateβfunc, updateλfunc, updateκfunc, pp, Es,
 E_BLS, κ_BLS, b_BLS, q)
 
+fit_cost = obj_func(p_star)
+q_star_U = q.(U_rad)
 
 using BenchmarkTools
 
-println("Timing: evaldesignmatrixκ!")
-Q = zeros(Complex{Float64}, length(U_cost), N_κ + N_κ_singlets)
-@btime NMRCalibrate.evaldesignmatrixκ!(Q, U_rad_cost, Es, w);
-# Q = zeros(Float64, 2*length(U_cost), N_κ + N_κ_singlets)
-# @btime NMRCalibrate.evaldesignmatrixκ!(Q, U_rad_cost, Es, w);
-
+# ### BLS timings.
 # println("Timing: evaldesignmatrixκ!")
-# C = zeros(Float64, 2*length(U_cost), N_κ + N_κ_singlets)
-# @btime NMRCalibrate.evaldesignmatrixκ!(C, U_rad_cost, Es, w);
+# Q = zeros(Complex{Float64}, length(U_cost), N_κ + N_κ_singlets)
+# @btime NMRCalibrate.evaldesignmatrixκ!(Q, U_rad_cost, Es, w);
+# # Q = zeros(Float64, 2*length(U_cost), N_κ + N_κ_singlets)
+# # @btime NMRCalibrate.evaldesignmatrixκ!(Q, U_rad_cost, Es, w);
 #
-# println("descrepancy: ", norm([real.(Q); imag.(Q)] - C))
-# println()
-
-println("q.(U_rad_cost)")
-@btime q.(U_rad_cost);
-
-println("obj_func.(p_star)")
-@btime obj_func(p_star);
-
-obj_func(p_star)
-
-# TODO I am here.
-
-q_U = q.(U_rad_cost)
-
-b_BLS = b = collect(reinterpret(Float64, y_cost))
-
-@btime B = reinterpret(Float64, Q);
-@btime c = B*κ_BLS - b_BLS;
-
-norm(q.(U_rad_cost) - y_cost)^2 - obj_func(p_star)
-
-L = 50
-a = randn(Complex{Float64}, L)
-b = randn(Complex{Float64}, L)
-
-sum( abs2(a[i]-b[i]) for i in eachindex(a))
-
-sum( real(a[i]-b[i])^2 + imag(a[i]-b[i])^2 for i in eachindex(a) )
-
-@assert 5==4
-
-# complex to real, imag matrix, interlaced.
-M1 = 5000
-L1 = 50
-W = randn(Complex{Float64}, M1, L1)
-@btime Wr = reinterpret(Float64, W);
-@btime Cr = [real.(W); imag.(W)];
-
-# complex to real,imag array, interlaced.
-V = randn(Complex{Float64}, M1)
-@btime Vr = reinterpret(Float64, V);
-@btime Br = [real.(V); imag.(V)];
-
-Wr = reinterpret(Float64, W)
-Vr = reinterpret(Float64, V)
-@btime Wr'*Vr;
-
-Cr = [real.(W); imag.(W)]
-Br = [real.(V); imag.(V)]
-@btime Cr'*Br;
-
-
-# L = 500
-# x = randn(L)
-# y = randn(L)
-# z = x + im .* y
+# # println("Timing: evaldesignmatrixκ!")
+# # C = zeros(Float64, 2*length(U_cost), N_κ + N_κ_singlets)
+# # @btime NMRCalibrate.evaldesignmatrixκ!(C, U_rad_cost, Es, w);
+# #
+# # println("descrepancy: ", norm([real.(Q); imag.(Q)] - C))
+# # println()
 #
-# @btime sum(z-z);
-# @btime sum(x-x) + sum(y-y);
+#
+# println("q.(U_rad_cost)")
+# @btime q.(U_rad_cost);
+#
+# println("obj_func.(p_star)")
+# @btime obj_func(p_star);
+#
+# obj_func(p_star)
+#
+# q_U = q.(U_rad_cost)
+#
+# b_BLS = b = collect(reinterpret(Float64, y_cost))
+#
+# @btime B = reinterpret(Float64, Q);
+# B = reinterpret(Float64, Q)
+# @btime c = B*κ_BLS - b_BLS;
+# c = B*κ_BLS - b_BLS
+#
+# norm(q.(U_rad_cost) - y_cost)^2 - obj_func(p_star)
+#
+# L = 50
+# a = randn(Complex{Float64}, L)
+# b = randn(Complex{Float64}, L)
+#
+# sum( abs2(a[i]-b[i]) for i in eachindex(a))
+#
+# sum( real(a[i]-b[i])^2 + imag(a[i]-b[i])^2 for i in eachindex(a) )
+
+###########################
+
+
+### reference.
+
+# reference, zero shift, phase.
+N_d = sum( NMRCalibrate.getNd(As[n]) for n = 1:length(As) )
+N_β = sum( NMRCalibrate.getNβ(As[n]) for n = 1:length(As) )
+N_λ = sum( NMRCalibrate.getNλ(As[n]) for n = 1:length(As) )
+#shift_manual = zeros(T, N_d)
+#β_manual = zeros(T, N_β)
+#λ_manual = ones(T, N_λ)
+
+#shift_manual = [-0.08; -0.1]
+shift_manual = [-0.11; -0.11]
+β_manual = copy(β_star)
+λ_manual = copy(λ_star)
+
+p_manual = [shift_manual; β_manual; λ_manual]
+
+manual_cost = obj_func(p_manual)
+#NMRCalibrate.parseκ!(Es, ones(T, length(κ_BLS)))
+fill!(w, 1.0)
+q_manual_U = q.(U_rad)
+println("norm(q_manual_U) = ", norm(q_manual_U))
+
+
+final_cost = obj_func(p_star)
+q_star_U = q.(U_rad)
+
+
+PyPlot.figure(fig_num)
+fig_num += 1
+
+PyPlot.plot(P, real.(q_manual_U), label = "q manual")
+PyPlot.plot(P_y, real.(y), label = "y")
+PyPlot.plot(P, real.(q_star_U), "--", label = "q star")
+#PyPlot.plot(P_cost, real.(y_cost), "x")
+
+PyPlot.legend()
+PyPlot.xlabel("ppm")
+PyPlot.ylabel("real")
+PyPlot.title("r = $(r). data (y) vs. fit vs. manual")
+
+#@assert 1==2
+β_initial = ones(14)
+
+optim_algorithm = :LN_BOBYQA # good.
+β0 = copy(β_initial)
+
+
+updatedfunc(p_manual)
+
+### packaged up.
+run_optim, obj_func3, E_BLS3, κ_BLS3, b_BLS3, updateβfunc3,
+q3 = NMRCalibrate.setupβLSsolver(optim_algorithm,
+    Es, As, LS_inds, U_rad_cost, y_cost;
+    κ_lb_default = 0.2,
+    κ_ub_default = 5.0,
+    max_iters = 50,
+    xtol_rel = 1e-9,
+    ftol_rel = 1e-9,
+    maxtime = Inf);
+
+println("obj_func3(β0) = ", obj_func3(β0))
+
+println("Timing: run_optim")
+p_β = copy(β0)
+@time minf, minx, ret, N_evals = run_optim(p_β)
+println()
+
+println("obj_func3(minx) = ", obj_func3(minx))
+minx3 = copy(minx)
+q3_star_U = q3.(U_rad)
+
+
+PyPlot.figure(fig_num)
+fig_num += 1
+
+PyPlot.plot(P, real.(q_manual_U), label = "q manual")
+PyPlot.plot(P_y, real.(y), label = "y")
+#PyPlot.plot(P, real.(g_star_U), "--", label = "z LS")
+
+#PyPlot.plot(P, real.(q2_star_U), "--", label = "fitβLSκ")
+PyPlot.plot(P, real.(q3_star_U), "--", label = "run_optim")
+
+PyPlot.legend()
+PyPlot.xlabel("ppm")
+PyPlot.ylabel("real")
+PyPlot.title("r = $(r). data (y) vs. fit vs. q")
+
+
+st_ind_d = 1
+fin_ind_d = st_ind_d + N_d - 1
+
+st_ind_β = fin_ind_d + 1
+fin_ind_β = st_ind_β + N_β - 1
+
+p3 = copy(p_manual)
+p3[st_ind_β:fin_ind_β] = minx
+refined_manual_cost = obj_func(p3)
+
+println("fit_cost            = ", fit_cost)
+println("refined_manual_cost = ", refined_manual_cost)
+
+
+PyPlot.figure(fig_num)
+fig_num += 1
+
+#PyPlot.plot(P, real.(q_manual_U), label = "q manual")
+PyPlot.plot(P_y, real.(y), label = "data")
+PyPlot.plot(P, real.(q_star_U), "--", label = "fit result")
+PyPlot.plot(P, real.(q3_star_U), "--", label = "refined manual")
+
+PyPlot.legend()
+PyPlot.xlabel("ppm")
+PyPlot.ylabel("real")
+PyPlot.title("r = $(r). data (y) vs. fit vs. q")

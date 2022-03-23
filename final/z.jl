@@ -129,7 +129,7 @@ q_star_U = q.(U_rad)
 PyPlot.figure(fig_num)
 fig_num += 1
 
-#PyPlot.plot(P, real.(q_manual_U), label = "q manual")
+PyPlot.plot(P, real.(q_manual_U), label = "q manual")
 PyPlot.plot(P_y, real.(y), label = "y")
 PyPlot.plot(P, real.(q_star_U), "--", label = "q star")
 #PyPlot.plot(P_cost, real.(y_cost), "x")
@@ -199,92 +199,92 @@ PyPlot.title("r = $(r). data (y) vs. fit vs. g")
 ###
 #@assert 1==2
 
-function getmeanΔc(Δc_m_compound::Vector{Vector{Vector{T}}},
-    part_inds_compound::Vector{Vector{Vector{Int}}}) where T
-
-    @assert length(part_inds_compound) == length(Δc_m_compound)
-
-    out = Vector{Vector{Vector{T}}}(undef, length(part_inds_compound))
-
-    for i = 1:length(part_inds_compound)
-
-        N_parition_elements = length(part_inds_compound[i])
-        out[i] = Vector{Vector{T}}(undef, N_parition_elements)
-
-        for k = 1:N_parition_elements
-            inds = part_inds_compound[i][k]
-
-            out[i][k] = Statistics.mean(Δc_m_compound[i][inds])
-        end
-    end
-
-    return out
-end
-
-A = As[1]
-Δc_m_compound_avg = getmeanΔc(A.Δc_m_compound, A.part_inds_compound)
-#CNMRSpectraSimulator.combinevectors(Δc_m_compound_avg)
-
-function estimateβ(inds_set::Vector{Vector{Int}},
-    c_all::Vector{Vector{T}},
-    phase_vec::Vector{T};
-    st_ind::Int = 1) where T
-    # loop through As, assemble. Δc matrix.
-    #N_rows = sum( sum( length(As[n].part_inds_compound[i]) for i = 1:length(As[n].part_inds_compound) ) for n = 1:length(As) )
-
-    @assert !isempty(c_all)
-    N_partition_elements = length(inds_set)
-    N_spins = length(c_all[1])
-
-    C = Matrix{T}(undef, N_partition_elements, N_spins)
-    y = Vector{T}(undef, N_partition_elements)
-
-    for k = 1:N_partition_elements
-        inds = inds_set[k]
-
-        C[k,:] = Statistics.mean( c_all[inds] )
-        y[k] = phase_vec[st_ind+k-1]
-    end
-
-    p_β = C\y
-
-    fin_ind = st_ind + N_spins - 1
-
-    return p_β, fin_ind, C, y
-end
-
-# z_flatten is the sum of all partition elements, of all spin groups in mixture.
-# p_β is the sum of all β parameters, which is sum of all spins in each spin group in mixture.
-function getinitialβ!(p_β::Vector{T},
-    z_flatten::Vector{Complex{T}}) where T <: Real
-
-    fill!(p_β, Inf)
-    st_ind = 1
-
-    for n = 1:length(As)
-        A = As[n]
-
-        for i = 1:length(A.part_inds_compound)
-            p_β_i, fin_ind, C, y = estimateβ(A.part_inds_compound[i],
-                A.Δc_m_compound[i], angle.(z_flatten); st_ind = st_ind)
-
-            println("norm(C*p_β_i-y) = ", norm(C*p_β_i-y)) # debug.
-            #@assert length(p_β_i) == length(st_ind:fin_ind)
-            p_β[st_ind:fin_ind] = p_β_i
-            st_ind = fin_ind + 1
-        end
-    end
-
-    return nothing
-end
-
-β_z = similar(β_initial)
-fill!(β_z, Inf)
-getinitialβ!(β_z, z_LS)
-#display([β_z; ])
-clamp!(β_z, -π+1e-5, π -1e-5)
-
-#@assert 2==5
+# function getmeanΔc(Δc_m_compound::Vector{Vector{Vector{T}}},
+#     part_inds_compound::Vector{Vector{Vector{Int}}}) where T
+#
+#     @assert length(part_inds_compound) == length(Δc_m_compound)
+#
+#     out = Vector{Vector{Vector{T}}}(undef, length(part_inds_compound))
+#
+#     for i = 1:length(part_inds_compound)
+#
+#         N_parition_elements = length(part_inds_compound[i])
+#         out[i] = Vector{Vector{T}}(undef, N_parition_elements)
+#
+#         for k = 1:N_parition_elements
+#             inds = part_inds_compound[i][k]
+#
+#             out[i][k] = Statistics.mean(Δc_m_compound[i][inds])
+#         end
+#     end
+#
+#     return out
+# end
+#
+# A = As[1]
+# Δc_m_compound_avg = getmeanΔc(A.Δc_m_compound, A.part_inds_compound)
+# #CNMRSpectraSimulator.combinevectors(Δc_m_compound_avg)
+#
+# function estimateβ(inds_set::Vector{Vector{Int}},
+#     c_all::Vector{Vector{T}},
+#     phase_vec::Vector{T};
+#     st_ind::Int = 1) where T
+#     # loop through As, assemble. Δc matrix.
+#     #N_rows = sum( sum( length(As[n].part_inds_compound[i]) for i = 1:length(As[n].part_inds_compound) ) for n = 1:length(As) )
+#
+#     @assert !isempty(c_all)
+#     N_partition_elements = length(inds_set)
+#     N_spins = length(c_all[1])
+#
+#     C = Matrix{T}(undef, N_partition_elements, N_spins)
+#     y = Vector{T}(undef, N_partition_elements)
+#
+#     for k = 1:N_partition_elements
+#         inds = inds_set[k]
+#
+#         C[k,:] = Statistics.mean( c_all[inds] )
+#         y[k] = phase_vec[st_ind+k-1]
+#     end
+#
+#     p_β = C\y
+#
+#     fin_ind = st_ind + N_spins - 1
+#
+#     return p_β, fin_ind, C, y
+# end
+#
+# # z_flatten is the sum of all partition elements, of all spin groups in mixture.
+# # p_β is the sum of all β parameters, which is sum of all spins in each spin group in mixture.
+# function getinitialβ!(p_β::Vector{T},
+#     z_flatten::Vector{Complex{T}}) where T <: Real
+#
+#     fill!(p_β, Inf)
+#     st_ind = 1
+#
+#     for n = 1:length(As)
+#         A = As[n]
+#
+#         for i = 1:length(A.part_inds_compound)
+#             p_β_i, fin_ind, C, y = estimateβ(A.part_inds_compound[i],
+#                 A.Δc_m_compound[i], angle.(z_flatten); st_ind = st_ind)
+#
+#             println("norm(C*p_β_i-y) = ", norm(C*p_β_i-y)) # debug.
+#             #@assert length(p_β_i) == length(st_ind:fin_ind)
+#             p_β[st_ind:fin_ind] = p_β_i
+#             st_ind = fin_ind + 1
+#         end
+#     end
+#
+#     return nothing
+# end
+#
+# β_z = similar(β_initial)
+# fill!(β_z, Inf)
+# getinitialβ!(β_z, z_LS)
+# #display([β_z; ])
+# clamp!(β_z, -π+1e-5, π -1e-5)
+#
+# #@assert 2==5
 
 #optim_algorithm = :LN_BOBYQA
 #optim_algorithm = :GN_ESCH
@@ -310,6 +310,9 @@ optim_algorithm = :LN_BOBYQA # good.
 println("optim_algorithm = ", optim_algorithm)
 println("β0 = ", β0)
 
+
+
+@assert 1==2
 
 ### packaged up.
 run_optim, obj_func3, E_BLS, κ_BLS, b_BLS, updateβfunc,

@@ -102,7 +102,7 @@ function costβLS(U_rad,
     tmp = B*κ_BLS - b_BLS
     cost = dot(tmp, tmp)
 
-    println(p)
+    #println(p)
     return cost
 end
 
