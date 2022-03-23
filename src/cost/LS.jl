@@ -177,70 +177,7 @@ function evaldesignmatrixκ!(B::Matrix{T},
     return nothing
 end
 
-function evaldesignmatrixκ2!(B::Matrix{Complex{T}},
-    U_rad,
-    Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T,NMRSpectraSimulator.SpinSysFIDType1{T}}},
-    w::Vector{T}) where T <: Real
 
-    #
-    M = length(U_rad)
-    N = length(Es)
-
-    N_κ, N_κ_singlets = countκ(Es)
-    #println((N_κ, N_κ_singlets))
-    #println(size(B))
-    @assert size(B) == (M, N_κ + N_κ_singlets)
-    #fill!(B, Inf) # debug.
-
-    Q = Matrix{Complex{T}}(undef, size(B,2), size(B,1))
-
-    resetκ!(Es)
-    j = 0
-
-    # loop over each κ partition element in Es.
-    for n = 1:N
-        A = Es[n]
-        @assert length(A.κs_α) == length(A.core.qs)
-
-        # spin system.
-        for i = 1:length(A.κs_α)
-
-            # partition
-            for k = 1:length(A.κs_α[i])
-
-                j += 1
-
-                # loop over each fit position.
-                for m = 1:M
-
-                    # taken from evalitproxysys()
-                    r = U_rad[m] - A.core.ss_params.d[i]
-
-                    #B[m,j] = w[n]*A.core.qs[i][k](r, A.core.ss_params.κs_λ[i])
-                    #w[n]*A.core.qs[i][k](r, A.core.ss_params.κs_λ[i])
-                    #B[m,j] = 1.9
-
-                    Q[j,m] = w[n]*A.core.qs[i][k](r, A.core.ss_params.κs_λ[i])
-                end
-            end
-        end
-
-        # singlets.
-        for k = 1:length(A.κs_α_singlets)
-            j += 1
-
-            for m = 1:M
-
-                B[m,j] = w[n]*NMRSpectraSimulator.evalκsinglets(U_rad[m], A.core.d_singlets,
-                A.core.αs_singlets, A.core.Ωs_singlets,
-                A.core.β_singlets, A.core.λ0, A.core.κs_λ_singlets)
-            end
-        end
-
-    end
-
-    return nothing
-end
 
 function evaldesignmatrixκ!(B::Matrix{T},
     U_rad,

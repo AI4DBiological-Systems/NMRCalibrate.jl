@@ -88,14 +88,14 @@ LS_inds = 1:length(U_cost)
 N_κ, N_κ_singlets = NMRCalibrate.countκ(Es)
 
 
-# q, updatedfunc, updateβfunc, updateλfunc, updateκfunc,
-# κ_BLS, getshiftfunc, getβfunc, getλfunc,
-# N_vars_set = NMRCalibrate.setupcostcLshiftLS(Es, As, fs, SW,
-# LS_inds, U_rad_cost, y_cost, Δ_shifts;
-# w = w, κ_lb_default = κ_lb_default, κ_ub_default = κ_ub_default)
-#
-# obj_func = pp->NMRCalibrate.costcLshift(U_rad_cost, y_cost,
-# updatedfunc, updateβfunc, updateλfunc, updateκfunc, pp, Es, κ_BLS, q)
+q, updatedfunc, updateβfunc, updateλfunc, updateκfunc,
+κ_BLS, getshiftfunc, getβfunc, getλfunc,
+N_vars_set = NMRCalibrate.setupcostcLshiftLS(Es, As, fs, SW,
+LS_inds, U_rad_cost, y_cost, Δ_shifts;
+w = w, κ_lb_default = κ_lb_default, κ_ub_default = κ_ub_default)
+
+obj_func = pp->NMRCalibrate.costcLshift(U_rad_cost, y_cost,
+updatedfunc, updateβfunc, updateλfunc, updateκfunc, pp, Es, κ_BLS, q)
 
 
 using BenchmarkTools
@@ -103,16 +103,23 @@ using BenchmarkTools
 println("Timing: evaldesignmatrixκ2!")
 Q = zeros(Complex{Float64}, length(U_cost), N_κ + N_κ_singlets)
 @btime NMRCalibrate.evaldesignmatrixκ2!(Q, U_rad_cost, Es, w);
+# Q = zeros(Float64, 2*length(U_cost), N_κ + N_κ_singlets)
+# @btime NMRCalibrate.evaldesignmatrixκ!(Q, U_rad_cost, Es, w);
 
-println("Timing: evaldesignmatrixκ!")
-C = zeros(Float64, 2*length(U_cost), N_κ + N_κ_singlets)
-@btime NMRCalibrate.evaldesignmatrixκ!(C, U_rad_cost, Es, w);
+# println("Timing: evaldesignmatrixκ!")
+# C = zeros(Float64, 2*length(U_cost), N_κ + N_κ_singlets)
+# @btime NMRCalibrate.evaldesignmatrixκ!(C, U_rad_cost, Es, w);
+#
+# println("descrepancy: ", norm([real.(Q); imag.(Q)] - C))
+# println()
 
-# println("q.(U_rad_cost)")
-# @btime q.(U_rad_cost);
+println("q.(U_rad_cost)")
+@btime q.(U_rad_cost);
 
-# println("obj_func.(p_star)")
-# @btime obj_func.(p_star);
+println("obj_func.(p_star)")
+@btime obj_func.(p_star);
+
+# TODO I am here.
 
 @assert 5==4
 

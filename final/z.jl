@@ -113,51 +113,6 @@ m = 1
 # println("Timing: obj_func")
 # @btime obj_func(p_star)
 
-# TODO idea: take u_rad instead of u for all evals. rid of 2*π.
-# use complex matrix for LS, then reinterpret for AtA.
-# make new version of solveBLScL()
-
-# need to speed up eval design matrix.
-N_κ, N_κ_singlets = NMRCalibrate.countκ(Es)
-
-# println("Timing: evaldesignmatrixκ!")
-# C = zeros(Float64, 2*length(U_cost), N_κ + N_κ_singlets)
-# @btime NMRCalibrate.evaldesignmatrixκ!(C, U_rad_cost, Es, w);
-
-println("Timing: evaldesignmatrixκ2!")
-Q = zeros(Complex{Float64}, length(U_cost), N_κ + N_κ_singlets)
-@btime NMRCalibrate.evaldesignmatrixκ!(Q, U_rad_cost, Es, w);
-
-# complex to real, imag matrix, interlaced.
-M1 = 5000
-L1 = 50
-W = randn(Complex{Float64}, M1, L1)
-@btime Wr = reinterpret(Float64, W);
-@btime Cr = [real.(W); imag.(W)];
-
-# complex to real,imag array, interlaced.
-V = randn(Complex{Float64}, M1)
-@btime Vr = reinterpret(Float64, V);
-@btime Br = [real.(V); imag.(V)];
-
-Wr = reinterpret(Float64, W)
-Vr = reinterpret(Float64, V)
-@btime Wr'*Vr;
-
-Cr = [real.(W); imag.(W)]
-Br = [real.(V); imag.(V)]
-@btime Cr'*Br;
-
-
-# L = 500
-# x = randn(L)
-# y = randn(L)
-# z = x + im .* y
-#
-# @btime sum(z-z);
-# @btime sum(x-x) + sum(y-y);
-
-@assert 1==2
 
 
 #####
