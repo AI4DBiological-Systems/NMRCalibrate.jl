@@ -221,24 +221,25 @@ PyPlot.title("r = $(r). LS z vs data")
 ### fit β.
 
 #@assert 1==2
-β_initial = ones(length(getβfunc(p_star)))
+#β_initial = ones(length(getβfunc(p_star)))
+β_initial = copy(getβfunc(p_star))
 
-optim_algorithm = :LN_BOBYQA # good.
-β0 = copy(β_initial)
+# optim_algorithm = :LN_BOBYQA # good.
+# β0 = copy(β_initial)
 
 # optim_algorithm = :GN_ESCH
-# β0 = copy(β_initial) # good for 500.
+# β0 = copy(β_initial) # ok
 #
 # optim_algorithm = :GN_ESCH
-# β0 = copy(β_z) # bad for 500, good for 5000.
-#
+# β0 = copy(β_initial)
+
 # optim_algorithm = :GN_ISRES
-# β0 = copy(β_z) # bad for 500. good for 5000
-#
-# optim_algorithm = :GN_DIRECT_L
-# β0 = copy(β_z) # good for 500.
+# β0 = copy(β_initial) # not good.
 
-updatedfunc(p_manual)
+optim_algorithm = :GN_DIRECT_L
+β0 = copy(β_initial) # good.
+
+
 
 ### packaged up.
 run_optim, obj_func3, E_BLS3, κ_BLS3, b_BLS3, updateβfunc3,
@@ -246,12 +247,19 @@ q3 = NMRCalibrate.setupβLSsolver(optim_algorithm,
     Es, As, LS_inds, U_rad_cost, y_cost;
     κ_lb_default = 0.2,
     κ_ub_default = 5.0,
-    max_iters = 50,
+    max_iters = 500,
     xtol_rel = 1e-9,
     ftol_rel = 1e-9,
     maxtime = Inf);
 
 println("obj_func3(β0) = ", obj_func3(β0))
+
+updatedfunc(zeros(length(p_manual)))
+updatedfunc(p_manual)
+updateλfunc(p_manual)
+
+# @btime run_optim(β0);
+# @assert 5==3
 
 println("Timing: run_optim")
 p_β = copy(β0)
@@ -261,6 +269,9 @@ println()
 println("obj_func3(minx) = ", obj_func3(minx))
 minx3 = copy(minx)
 q3_star_U = q3.(U_rad)
+
+
+
 
 
 PyPlot.figure(fig_num)
@@ -274,6 +285,9 @@ PyPlot.legend()
 PyPlot.xlabel("ppm")
 PyPlot.ylabel("real")
 PyPlot.title("r = $(r). refined vs data")
+
+
+
 
 
 PyPlot.figure(fig_num)
@@ -300,6 +314,9 @@ refined_manual_cost = obj_func(p3)
 
 println("last_version_cost   = ", last_version_cost)
 println("refined_manual_cost = ", refined_manual_cost)
+
+
+
 
 
 PyPlot.figure(fig_num)

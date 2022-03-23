@@ -98,3 +98,64 @@ E_BLS, κ_BLS, b_BLS, q)
 
 
 ### nested optim.
+
+N_d = sum( getNd(As[n]) for n = 1:length(As) )
+N_β = sum( getNβ(As[n]) for n = 1:length(As) )
+N_λ = sum( getNλ(As[n]) for n = 1:length(As) )
+p_β = zeros(N_β)
+
+#### initial values.
+shift_lb = -ones(T, N_d)
+shift_ub = ones(T, N_d)
+shift_initial = zeros(T, N_d)
+
+λ_lb = λ_each_lb .* ones(T, N_λ)
+λ_ub = λ_each_ub .* ones(T, N_λ)
+λ_initial = ones(T, N_λ)
+
+### set up constraints and initial guess.
+p_lb = [ shift_lb; λ_lb ]
+p_ub = [ shift_ub; λ_ub ]
+p_initial = [shift_initial; λ_initial]
+
+##########
+st_ind_d = 1
+fin_ind_d = st_ind_d + N_d - 1
+updatedfunc = pp->updatemixtured!(As, pp, st_ind_d, fs, SW, shift_constants)
+
+#λupdate.
+st_ind_λ = fin_ind_d + 1
+fin_ind_λ = st_ind_λ + N_λ -1
+updateλfunc = pp->updateλ!(As, pp, st_ind_λ)
+
+q, updatedfunc, updateλfunc, getshiftfunc, getλfunc, N_vars_set,
+run_optim, obj_func_β, E_BLS, κ_BLS, b_BLS, updateβfunc,
+q_β = setupcostnestedλd(Es, As, fs, SW, LS_inds, U_rad_cost, y_cost, Δ_shift;
+    w = w,
+    optim_algorithm = :GN_DIRECT_L,
+    κ_lb_default = κ_lb_default,
+    κ_ub_default = κ_ub_default,
+    max_iters = 500,
+    xtol_rel = 1e-9,
+    ftol_rel = 1e-9,
+    maxtime = Inf)
+
+obj_func = pp->costnestedλd(U_rad_cost, y_cost, updatedfunc, updateλfunc, pp,
+Es, As, q, E_BLS, κ_BLS, b_BLS, p_β)
+
+grad_func = xx->FiniteDiff.finite_difference_gradient(f, xx)
+
+opt = NLopt.Opt(optim_algorithm, N_β)
+
+run_optim = pp->runNLopt!(opt,
+pp,
+obj_func,
+grad_func,
+p_lb,
+p_ub;
+max_iters = max_iters,
+xtol_rel = xtol_rel,
+ftol_rel = ftol_rel,
+maxtime = maxtime)
+
+#TODO bring in warping.
