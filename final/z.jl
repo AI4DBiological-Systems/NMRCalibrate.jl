@@ -87,37 +87,15 @@ U_rad_cost = U_cost .* (2*π)
 LS_inds = 1:length(U_cost)
 
 q, updatedfunc, updateβfunc, updateλfunc, updateκfunc,
-κ_BLS, getshiftfunc, getβfunc, getλfunc,
+E_BLS, κ_BLS, b_BLS, getshiftfunc, getβfunc, getλfunc,
 N_vars_set = NMRCalibrate.setupcostcLshiftLS(Es, As, fs, SW,
 LS_inds, U_rad_cost, y_cost, Δ_shifts;
 w = w, κ_lb_default = κ_lb_default, κ_ub_default = κ_ub_default)
 
 obj_func = pp->NMRCalibrate.costcLshift(U_rad_cost, y_cost,
-updatedfunc, updateβfunc, updateλfunc, updateκfunc, pp, Es, κ_BLS, q)
+updatedfunc, updateβfunc, updateλfunc, updateκfunc, pp, Es,
+E_BLS, κ_BLS, b_BLS, q)
 
-
-using BenchmarkTools
-
-
-m = 1
-
-# println("Timing: q(U[m])")
-# @btime q(U[m])
-#
-# println("Timing: q.(U_cost)")
-# @btime q.(U_cost)
-#
-# println("Timing: updateκfunc")
-# @btime updateκfunc(p_star)
-#
-# println("Timing: obj_func")
-# @btime obj_func(p_star)
-
-
-
-#####
-
-### end new.
 
 ### reference.
 
@@ -162,6 +140,7 @@ PyPlot.ylabel("real")
 PyPlot.title("r = $(r). data (y) vs. fit vs. manual")
 
 
+
 ############# LS fit on manual.
 
 N_d = sum( NMRCalibrate.getNd(As[n]) for n = 1:length(As) )
@@ -194,29 +173,31 @@ Gs = collect( NMRSpectraSimulator.zCompoundFIDType(As[i]) for i = 1:length(As) )
 
 ###
 g, updateβfunc, updatezfunc,
-z_BLS, getβfunc = NMRCalibrate.setupcostβLS(Gs, As, LS_inds, U_rad_cost, y_cost)
+E_LS, z_LS, b_LS,
+getβfunc = NMRCalibrate.setupcostβLS(Gs, As, LS_inds, U_rad_cost, y_cost)
 
 println("Timing: updatezfunc() and parsez!()")
 @time updatezfunc(0.0)
-@time NMRCalibrate.parsez!(Gs, z_BLS)
+@time NMRCalibrate.parsez!(Gs, z_LS)
 
 
 g_star_U = g.(U_rad)
 
-# PyPlot.figure(fig_num)
-# fig_num += 1
-#
-# PyPlot.plot(P, real.(q_manual_U), label = "q manual")
-# PyPlot.plot(P_y, real.(y), label = "y")
-# PyPlot.plot(P, real.(g_star_U), "--", label = "g star")
-#
-# PyPlot.legend()
-# PyPlot.xlabel("ppm")
-# PyPlot.ylabel("real")
-# PyPlot.title("r = $(r). data (y) vs. fit vs. g")
+
+PyPlot.figure(fig_num)
+fig_num += 1
+
+PyPlot.plot(P, real.(q_manual_U), label = "q manual")
+PyPlot.plot(P_y, real.(y), label = "y")
+PyPlot.plot(P, real.(g_star_U), "--", label = "g star")
+
+PyPlot.legend()
+PyPlot.xlabel("ppm")
+PyPlot.ylabel("real")
+PyPlot.title("r = $(r). data (y) vs. fit vs. g")
 
 ###
-
+#@assert 1==2
 
 function getmeanΔc(Δc_m_compound::Vector{Vector{Vector{T}}},
     part_inds_compound::Vector{Vector{Vector{Int}}}) where T
@@ -299,10 +280,11 @@ end
 
 β_z = similar(β_initial)
 fill!(β_z, Inf)
-getinitialβ!(β_z, z_BLS)
-display([β_z; ])
+getinitialβ!(β_z, z_LS)
+#display([β_z; ])
 clamp!(β_z, -π+1e-5, π -1e-5)
 
+#@assert 2==5
 
 #optim_algorithm = :LN_BOBYQA
 #optim_algorithm = :GN_ESCH
@@ -312,17 +294,17 @@ clamp!(β_z, -π+1e-5, π -1e-5)
 optim_algorithm = :LN_BOBYQA # good.
 β0 = copy(β_initial)
 
-optim_algorithm = :GN_ESCH
-β0 = copy(β_initial) # good for 500.
-
-optim_algorithm = :GN_ESCH
-β0 = copy(β_z) # bad for 500, good for 5000.
-
-optim_algorithm = :GN_ISRES
-β0 = copy(β_z) # bad for 500. good for 5000
-
-optim_algorithm = :GN_DIRECT_L
-β0 = copy(β_z) # good for 500.
+# optim_algorithm = :GN_ESCH
+# β0 = copy(β_initial) # good for 500.
+#
+# optim_algorithm = :GN_ESCH
+# β0 = copy(β_z) # bad for 500, good for 5000.
+#
+# optim_algorithm = :GN_ISRES
+# β0 = copy(β_z) # bad for 500. good for 5000
+#
+# optim_algorithm = :GN_DIRECT_L
+# β0 = copy(β_z) # good for 500.
 
 
 println("optim_algorithm = ", optim_algorithm)
@@ -330,12 +312,12 @@ println("β0 = ", β0)
 
 
 ### packaged up.
-run_optim, f, κ_BLS, updateβfunc,
+run_optim, obj_func3, E_BLS, κ_BLS, b_BLS, updateβfunc,
 q3 = NMRCalibrate.setupβLSsolver(optim_algorithm,
     Es, As, LS_inds, U_rad_cost, y_cost;
     κ_lb_default = 0.2,
     κ_ub_default = 5.0,
-    max_iters = 500,
+    max_iters = 50,
     xtol_rel = 1e-9,
     ftol_rel = 1e-9,
     maxtime = Inf);
@@ -346,12 +328,15 @@ p_β = copy(β0)
 println()
 
 
+#@assert 1==44
 
 # force eval to update q2.
 println("f(minx) = ", f(minx))
 minx1 = copy(minx)
-q3_star_U = q3.(U)
+q3_star_U = q3.(U_rad)
 
+
+# TODO obj_func2(minx) vs obj_func2(β0) evaluates to same cost.
 ## unpackaged.
 println("Timing: fitβ")
 #β0 = β_initial
@@ -361,7 +346,7 @@ obj_func2 = NMRCalibrate.fitβLSκ(U_cost, y_cost, LS_inds, Es, As,
     optim_algorithm = optim_algorithm,
     max_iters = 500)
 
-q2_star_U = q2.(U)
+q2_star_U = q2.(U_rad)
 println("norm(q2_star_U-q3_star_U) = ", norm(q2_star_U-q3_star_U))
 println()
 
@@ -370,9 +355,10 @@ fig_num += 1
 
 PyPlot.plot(P, real.(q_manual_U), label = "q manual")
 PyPlot.plot(P_y, real.(y), label = "y")
-PyPlot.plot(P, real.(q2_star_U), "--", label = "q2 star")
-PyPlot.plot(P, real.(g_star_U), "--", label = "g star")
-PyPlot.plot(P, real.(q3_star_U), "--", label = "q3 star")
+PyPlot.plot(P, real.(g_star_U), "--", label = "z LS")
+
+PyPlot.plot(P, real.(q2_star_U), "--", label = "fitβLSκ")
+#PyPlot.plot(P, real.(q3_star_U), "--", label = "run_optim")
 
 PyPlot.legend()
 PyPlot.xlabel("ppm")

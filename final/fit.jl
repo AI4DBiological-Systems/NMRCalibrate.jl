@@ -313,7 +313,7 @@ import PlotlyJS
 import Plots
 Plots.plotly()
 
-projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/test_glucose1"
+projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/$(project_name)"
 plots_save_folder = joinpath(projects_dir, "plots")
 isdir(plots_save_folder) || mkdir(plots_save_folder)
 project_title = "test" # TODO change later.

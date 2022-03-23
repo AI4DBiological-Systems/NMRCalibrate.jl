@@ -88,7 +88,7 @@ function runalignment(shift_constants,
     println()
 
     q, updatedfunc, updateβfunc, updateλfunc, updateκfunc, #updatewfunc,
-    κ_BLS, getshiftfunc, getβfunc, getλfunc,
+    E_BLS, κ_BLS, b_BLS, getshiftfunc, getβfunc, getλfunc,
     N_vars_set = setupcostcLshiftLS(Es, As, fs, SW,
         LS_inds, U_rad_cost, y_cost, shift_constants;
         w = w, κ_lb_default = κ_lb_default, κ_ub_default = κ_ub_default)
@@ -96,12 +96,9 @@ function runalignment(shift_constants,
     updateκfunc(p_initial)
     parseκ!(Es, κ_BLS)
 
-    # TODO: I am here.
-    #q_star = uu->q_star_rad(uu*2*π) # input: Hz.
-
     ### cost function.
     obj_func = pp->costcLshift(U_rad_cost, y_cost,
-    updatedfunc, updateβfunc, updateλfunc, updateκfunc, pp, Es, κ_BLS, q)
+    updatedfunc, updateβfunc, updateλfunc, updateκfunc, pp, Es, E_BLS, κ_BLS, b_BLS, q)
 
     grad_func = xx->FiniteDiff.finite_difference_gradient(obj_func, xx)
 
@@ -155,14 +152,14 @@ function fitβLSκ(U_rad_cost,
     κ_lb_default = 0.2,
     κ_ub_default = 50.0) where {T <: Real, SST}
 
-    @assert length(U_cost) == length(y_cost) == length(LS_inds)
+    @assert length(U_rad_cost) == length(y_cost) == length(LS_inds)
 
     q, updateβfunc, updateκfunc,
-    κ_BLS, getβfunc = setupcostβLS(Es, As, LS_inds, U_rad_cost, y_cost)
+    E_BLS, κ_BLS, b_BLS, getβfunc = setupcostβLS(Es, As, LS_inds, U_rad_cost, y_cost)
 
     # updateκfunc(0.0)
     # NMRCalibrate.parseκ!(Es, κ_BLS)
-    obj_func = pp->costβLS(U_rad_cost, y_cost, updateβfunc, updateκfunc, pp, Es, κ_BLS, q)
+    obj_func = pp->costβLS(U_rad_cost, y_cost, updateβfunc, updateκfunc, pp, Es, E_BLS, κ_BLS, b_BLS, q)
     grad_func = xx->FiniteDiff.finite_difference_gradient(obj_func, xx)
 
     # force eval for debugging.
@@ -173,7 +170,7 @@ function fitβLSκ(U_rad_cost,
     println()
 
     opt = NLopt.Opt(optim_algorithm, length(β_initial)) # global evolutionary.
-
+println(β_initial)
     minf, minx, ret, numevals = NMRCalibrate.runNLopt!(  opt,
         β_initial,
         obj_func,

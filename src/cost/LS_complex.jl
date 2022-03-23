@@ -26,7 +26,7 @@ end
 
 ####### w.
 
-function setupupdatew(N_positions::Int, N_compounds::Int, y::Vector{Complex{T}}) where T <: Real
+function setupupdateLS(N_positions::Int, N_compounds::Int, y::Vector{Complex{T}}) where T <: Real
 
     A = Matrix{Complex{T}}(undef, N_positions, N_compounds)
     w = zeros(T, N_compounds)

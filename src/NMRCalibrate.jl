@@ -27,8 +27,8 @@ include("../src/IO/synthetic_setup.jl")
 
 include("../src/DSP/dsp.jl")
 
-include("../src/cost/LS.jl")
-#include("../src/cost/LS_complex.jl")
+#include("../src/cost/LS.jl")
+include("../src/cost/LS_complex.jl")
 include("../src/cost/LS_z.jl")
 
 include("../src/cost/updates.jl")

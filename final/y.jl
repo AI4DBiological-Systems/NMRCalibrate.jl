@@ -89,20 +89,21 @@ N_κ, N_κ_singlets = NMRCalibrate.countκ(Es)
 
 
 q, updatedfunc, updateβfunc, updateλfunc, updateκfunc,
-κ_BLS, getshiftfunc, getβfunc, getλfunc,
+E_BLS, κ_BLS, b_BLS, getshiftfunc, getβfunc, getλfunc,
 N_vars_set = NMRCalibrate.setupcostcLshiftLS(Es, As, fs, SW,
 LS_inds, U_rad_cost, y_cost, Δ_shifts;
 w = w, κ_lb_default = κ_lb_default, κ_ub_default = κ_ub_default)
 
 obj_func = pp->NMRCalibrate.costcLshift(U_rad_cost, y_cost,
-updatedfunc, updateβfunc, updateλfunc, updateκfunc, pp, Es, κ_BLS, q)
+updatedfunc, updateβfunc, updateλfunc, updateκfunc, pp, Es,
+E_BLS, κ_BLS, b_BLS, q)
 
 
 using BenchmarkTools
 
-println("Timing: evaldesignmatrixκ2!")
+println("Timing: evaldesignmatrixκ!")
 Q = zeros(Complex{Float64}, length(U_cost), N_κ + N_κ_singlets)
-@btime NMRCalibrate.evaldesignmatrixκ2!(Q, U_rad_cost, Es, w);
+@btime NMRCalibrate.evaldesignmatrixκ!(Q, U_rad_cost, Es, w);
 # Q = zeros(Float64, 2*length(U_cost), N_κ + N_κ_singlets)
 # @btime NMRCalibrate.evaldesignmatrixκ!(Q, U_rad_cost, Es, w);
 
@@ -117,9 +118,28 @@ println("q.(U_rad_cost)")
 @btime q.(U_rad_cost);
 
 println("obj_func.(p_star)")
-@btime obj_func.(p_star);
+@btime obj_func(p_star);
+
+obj_func(p_star)
 
 # TODO I am here.
+
+q_U = q.(U_rad_cost)
+
+b_BLS = b = collect(reinterpret(Float64, y_cost))
+
+@btime B = reinterpret(Float64, Q);
+@btime c = B*κ_BLS - b_BLS;
+
+norm(q.(U_rad_cost) - y_cost)^2 - obj_func(p_star)
+
+L = 50
+a = randn(Complex{Float64}, L)
+b = randn(Complex{Float64}, L)
+
+sum( abs2(a[i]-b[i]) for i in eachindex(a))
+
+sum( real(a[i]-b[i])^2 + imag(a[i]-b[i])^2 for i in eachindex(a) )
 
 @assert 5==4
 

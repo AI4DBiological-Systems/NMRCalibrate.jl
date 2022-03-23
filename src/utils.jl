@@ -24,20 +24,19 @@ function setupcostβLS(Gs::Vector{NMRSpectraSimulator.zCompoundFIDType{T, SST}},
 
     ### LS κ.
     U_rad_LS = U0_rad[LS_inds]
-    b_BLS = [real.(y0[LS_inds]); imag.(y0[LS_inds])]
 
     N_z, N_z_singlets = countz(Gs)
     N_z_vars = N_z + N_z_singlets
 
-    E_BLS, κ_BLS = setupupdatew(length(U_rad_LS), N_z_vars)
-    z_BLS = Vector{Complex{T}}(undef, length(κ_BLS))
+    E_LS, z_LS, b_LS = setupupdateLS(length(U_rad_LS), N_z_vars, y0[LS_inds])
+    z_LS = Vector{Complex{T}}(undef, length(z_LS))
 
-    updatezfunc = xx->updatez!(E_BLS, b_BLS, z_BLS, U_rad_LS, Gs, w)
+    updatezfunc = xx->updatez!(E_LS, b_LS, z_LS, U_rad_LS, Gs, w)
 
     #### extract parameters from p.
     getβfunc = pp->pp[st_ind_β:fin_ind_β]
 
-    return f, updateβfunc, updatezfunc, z_BLS, getβfunc
+    return f, updateβfunc, updatezfunc, E_LS, z_LS, b_LS, getβfunc
 end
 
 """
@@ -60,16 +59,12 @@ function setupcostβLS(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, SST}}
     updateβfunc = pp->updateβ!(As, pp, st_ind_β)
 
     f = uu->NMRSpectraSimulator.evalitpproxymixture(uu, Es; w = w)
-
-
     ### LS κ.
     U_rad_LS = U0_rad[LS_inds]
-    b_BLS = [real.(y0[LS_inds]); imag.(y0[LS_inds])]
 
     N_κ, N_κ_singlets = countκ(Es)
     N_κ_vars = N_κ + N_κ_singlets
-
-    E_BLS, κ_BLS = setupupdatew(length(U_rad_LS), N_κ_vars)
+    E_BLS, κ_BLS, b_BLS = setupupdateLS(length(U_rad_LS), N_κ_vars, y0[LS_inds])
 
     κ_lb = ones(N_κ_vars) .* κ_lb_default
     κ_ub = ones(N_κ_vars) .* κ_ub_default
@@ -80,13 +75,14 @@ function setupcostβLS(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, SST}}
     #### extract parameters from p.
     getβfunc = pp->pp[st_ind_β:fin_ind_β]
 
-    return f, updateβfunc, updateκfunc, κ_BLS, getβfunc
+    return f, updateβfunc, updateκfunc, E_BLS, κ_BLS, b_BLS, getβfunc
 end
 
 function costβLS(U_rad,
     S_U::Vector{Complex{T}},
     updateβfunc, updateκfunc,
-    p::Vector{T}, Es, κ_BLS,
+    p::Vector{T}, Es,
+    E_BLS::Matrix{Complex{T}}, κ_BLS::Vector{T}, b_BLS,
     f)::T where T <: Real
 
     updateβfunc(p)
@@ -94,15 +90,19 @@ function costβLS(U_rad,
     updateκfunc(p)
     parseκ!(Es, κ_BLS)
 
-    ## l-2 costfunc.
-    cost = zero(T)
-    for m = 1:length(S_U)
+    # ## l-2 costfunc.
+    # cost = zero(T)
+    # for m = 1:length(S_U)
+    #
+    #     f_u = f(U_rad[m])
+    #
+    #     cost += abs2( f_u - S_U[m] )
+    # end
+    B = reinterpret(T, E_BLS)
+    tmp = B*κ_BLS - b_BLS
+    cost = dot(tmp, tmp)
 
-        f_u = f(U_rad[m])
-
-        cost += abs2( f_u - S_U[m] )
-    end
-
+    println(p)
     return cost
 end
 
@@ -257,16 +257,10 @@ function setupcostcLshiftLS(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, 
 
     N_κ, N_κ_singlets = countκ(Es)
     N_κ_vars = N_κ + N_κ_singlets
-    E_BLS, κ_BLS = setupupdatew(length(U_rad_LS), N_κ_vars)
+    E_BLS, κ_BLS, b_BLS = setupupdateLS(length(U_rad_LS), N_κ_vars, y0[LS_inds])
 
     κ_lb = ones(N_κ_vars) .* κ_lb_default
     κ_ub = ones(N_κ_vars) .* κ_ub_default
-
-    # debug.
-    println("size(E_BLS) = ", size(E_BLS))
-    # end debug.
-
-    b_BLS = [real.(y0[LS_inds]); imag.(y0[LS_inds])]
 
     updateκfunc = xx->updateκ!(E_BLS, b_BLS, κ_BLS,
     U_rad_LS, Es, w, κ_lb, κ_ub)
@@ -277,7 +271,7 @@ function setupcostcLshiftLS(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, 
     getλfunc = pp->pp[st_ind_λ:fin_ind_λ]
 
     return f, updatedfunc, updateβfunc, updateλfunc, updateκfunc,
-    κ_BLS, getshiftfunc, getβfunc, getλfunc, N_vars_set
+    E_BLS, κ_BLS, b_BLS, getshiftfunc, getβfunc, getλfunc, N_vars_set
 end
 
 function mergeinds(inds_set::Vector{Vector{Int}}, merge_set) where T
@@ -301,7 +295,9 @@ end
 function costcLshift(U_rad,
     S_U::Vector{Complex{T}},
     updatedfunc, updateβfunc, updateλfunc, updateκfunc,
-    p::Vector{T}, Es, κ_BLS,
+    p::Vector{T},
+    Es,
+    E_BLS::Matrix{Complex{T}}, κ_BLS::Vector{T}, b_BLS,
     f)::T where T <: Real
 
     #println("p = ", p)
@@ -312,25 +308,20 @@ function costcLshift(U_rad,
 
     updateκfunc(p)
     parseκ!(Es, κ_BLS)
-    # try
-    #     updateκfunc(p)
-    # catch err_var
-    #     println("error: ", err_var)
-    #     println("p = ", p)
+
+    # ## l-2 costfunc.
+    # cost = zero(T)
+    # for m = 1:length(S_U)
+    #
+    #     f_u = f(U_rad[m])
+    #
+    #     cost += abs2( f_u - S_U[m] )
+    #     #cost += (abs2(f_u) - abs2(S_U[m]))^2
+    #     #cost += abs2( f_buffer[m] - DFT_s[m] ) + (abs2(f_buffer[m]) - abs2(DFT_s[m]))^2
     # end
-
-
-    ## l-2 costfunc.
-    cost = zero(T)
-    for m = 1:length(S_U)
-
-        f_u = f(U_rad[m])
-
-        cost += abs2( f_u - S_U[m] )
-        #cost += (abs2(f_u) - abs2(S_U[m]))^2
-
-        #cost += abs2( f_buffer[m] - DFT_s[m] ) + (abs2(f_buffer[m]) - abs2(DFT_s[m]))^2
-    end
+    B = reinterpret(T, E_BLS)
+    tmp = B*κ_BLS - b_BLS
+    cost = dot(tmp, tmp)
 
     return cost
 end
@@ -357,13 +348,13 @@ function setupβLSsolver(optim_algorithm,
     p_lb = β_lb
     p_ub = β_ub
 
-    q, updateβfunc, updateκfunc, κ_BLS,
+    q, updateβfunc, updateκfunc, E_BLS, κ_BLS, b_BLS,
     getβfunc = setupcostβLS(Es, As, LS_inds, U_rad_cost, y_cost;
         κ_lb_default = κ_lb_default,
         κ_ub_default = κ_ub_default)
 
-    f = pp->costβLS(U_rad_cost, y_cost, updateβfunc, updateκfunc, pp,
-    Es, κ_BLS, q)
+    f = pp->costβLS(U_rad_cost, y_cost, updateβfunc, updateκfunc, pp, Es,
+    E_BLS, κ_BLS, b_BLS, q)
 
     df = xx->FiniteDiff.finite_difference_gradient(f, xx)
 
@@ -381,7 +372,7 @@ function setupβLSsolver(optim_algorithm,
         ftol_rel = ftol_rel,
         maxtime = maxtime)
 
-    return run_optim, f, κ_BLS, updateβfunc, q
+    return run_optim, f, E_BLS, κ_BLS, b_BLS, updateβfunc, q
 end
 
 
