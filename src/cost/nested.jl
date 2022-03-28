@@ -8,8 +8,8 @@ function setupcostnestedλd(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, 
     fs::T,
     SW::T,
     LS_inds,
-    U0,
-    y0::Vector{Complex{T}},
+    U_rad_cost,
+    y_cost::Vector{Complex{T}},
     shift_constants;
     w = ones(T, length(Es)),
     optim_algorithm = :GN_DIRECT_L,
@@ -32,7 +32,7 @@ function setupcostnestedλd(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, 
     updatedfunc = pp->updatemixtured!(As, pp, st_ind_d, fs, SW, shift_constants)
 
     #λupdate.
-    st_ind_λ = fin_ind_β + 1
+    st_ind_λ = fin_ind_d + 1
     fin_ind_λ = st_ind_λ + N_λ -1
     updateλfunc = pp->updateλ!(As, pp, st_ind_λ)
 
@@ -40,7 +40,7 @@ function setupcostnestedλd(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, 
 
     # β, κ update.
     run_optim, obj_func_β, E_BLS, κ_BLS, b_BLS, updateβfunc,
-    q_β = NMRCalibrate.setupβLSsolver(optim_algorithm_β,
+    q_β = NMRCalibrate.setupβLSsolver(optim_algorithm,
         Es, As, LS_inds, U_rad_cost, y_cost;
         κ_lb_default = κ_lb_default,
         κ_ub_default = κ_ub_default,

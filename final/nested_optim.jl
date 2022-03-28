@@ -12,6 +12,9 @@ import .NMRCalibrate
 import OffsetArrays
 import Interpolations
 
+import NLopt
+import MonotoneMaps
+
 #import Clustering
 
 PyPlot.close("all")
@@ -97,17 +100,42 @@ updatedfunc, updateβfunc, updateλfunc, updateκfunc, pp, Es,
 E_BLS, κ_BLS, b_BLS, q)
 
 
+
+
+
+#q2 = uu->NMRSpectraSimulator.evalitpproxymixture(uu, Es; w = w)
+
+q_U = q.(U_rad)
+
+PyPlot.figure(fig_num)
+fig_num += 1
+
+PyPlot.plot(P_y, real.(y), label = "y")
+PyPlot.plot(P, real.(q_U), label = "q")
+#PyPlot.plot(P, real.(q3_star_U), "--", label = "run_optim")
+
+PyPlot.legend()
+PyPlot.xlabel("ppm")
+PyPlot.ylabel("real")
+PyPlot.title("r = $(r). load result vs data")
+
+#@assert 1==2
+
+
+
 ### nested optim.
 
-N_d = sum( getNd(As[n]) for n = 1:length(As) )
-N_β = sum( getNβ(As[n]) for n = 1:length(As) )
-N_λ = sum( getNλ(As[n]) for n = 1:length(As) )
+N_d = sum( NMRCalibrate.getNd(As[n]) for n = 1:length(As) )
+N_β = sum( NMRCalibrate.getNβ(As[n]) for n = 1:length(As) )
+N_λ = sum( NMRCalibrate.getNλ(As[n]) for n = 1:length(As) )
 p_β = zeros(N_β)
 
 #### initial values.
 shift_lb = -ones(T, N_d)
 shift_ub = ones(T, N_d)
 shift_initial = zeros(T, N_d)
+λ_each_lb = 0.2
+λ_each_ub = 50.0
 
 λ_lb = λ_each_lb .* ones(T, N_λ)
 λ_ub = λ_each_ub .* ones(T, N_λ)
@@ -116,21 +144,33 @@ shift_initial = zeros(T, N_d)
 ### set up constraints and initial guess.
 p_lb = [ shift_lb; λ_lb ]
 p_ub = [ shift_ub; λ_ub ]
-p_initial = [shift_initial; λ_initial]
+#p_initial = [shift_initial; λ_initial]
+
+# loaded answer.
+p_initial = [ -0.11701290729148561;
+ -0.9360412587205644;
+ 1.1992580872763856
+ 1.1984875571682057]
+
+## want to get to this answer.
+# p_initial = [ -0.11701290729148561;
+# -0.1;
+# 1.1992580872763856
+# 1.1984875571682057]
 
 ##########
 st_ind_d = 1
 fin_ind_d = st_ind_d + N_d - 1
-updatedfunc = pp->updatemixtured!(As, pp, st_ind_d, fs, SW, shift_constants)
+updatedfunc = pp->NMRCalibrate.updatemixtured!(As, pp, st_ind_d, fs, SW, shift_constants)
 
 #λupdate.
 st_ind_λ = fin_ind_d + 1
 fin_ind_λ = st_ind_λ + N_λ -1
-updateλfunc = pp->updateλ!(As, pp, st_ind_λ)
+updateλfunc = pp->NMRCalibrate.updateλ!(As, pp, st_ind_λ)
 
 q, updatedfunc, updateλfunc, getshiftfunc, getλfunc, N_vars_set,
 run_optim, obj_func_β, E_BLS, κ_BLS, b_BLS, updateβfunc,
-q_β = setupcostnestedλd(Es, As, fs, SW, LS_inds, U_rad_cost, y_cost, Δ_shift;
+q_β = NMRCalibrate.setupcostnestedλd(Es, As, fs, SW, LS_inds, U_rad_cost, y_cost, Δ_shifts;
     w = w,
     optim_algorithm = :GN_DIRECT_L,
     κ_lb_default = κ_lb_default,
@@ -140,22 +180,52 @@ q_β = setupcostnestedλd(Es, As, fs, SW, LS_inds, U_rad_cost, y_cost, Δ_shift;
     ftol_rel = 1e-9,
     maxtime = Inf)
 
-obj_func = pp->costnestedλd(U_rad_cost, y_cost, updatedfunc, updateλfunc, pp,
-Es, As, q, E_BLS, κ_BLS, b_BLS, p_β)
+obj_func = pp->NMRCalibrate.costnestedλd(U_rad_cost, y_cost, updatedfunc, updateλfunc, pp,
+Es, As, q, run_optim, E_BLS, κ_BLS, b_BLS, p_β)
 
 grad_func = xx->FiniteDiff.finite_difference_gradient(f, xx)
 
-opt = NLopt.Opt(optim_algorithm, N_β)
+optim_algorithm = :GN_ESCH
+opt = NLopt.Opt(optim_algorithm, length(p_initial))
 
-run_optim = pp->runNLopt!(opt,
-pp,
-obj_func,
-grad_func,
-p_lb,
-p_ub;
-max_iters = max_iters,
-xtol_rel = xtol_rel,
-ftol_rel = ftol_rel,
-maxtime = maxtime)
+max_iters = 10
+xtol_rel = 1e-3
+ftol_rel = 1e-3
+maxtime = Inf
 
-#TODO bring in warping.
+println("obj_func(p_initial) = ", obj_func(p_initial))
+println()
+
+println("Starting optim.")
+@time minf, minx, ret, N_evals = NMRCalibrate.runNLopt!(opt,
+    p_initial,
+    obj_func,
+    grad_func,
+    p_lb,
+    p_ub;
+    max_iters = max_iters,
+    xtol_rel = xtol_rel,
+    ftol_rel = ftol_rel,
+    maxtime = maxtime)
+
+#
+minf2 = obj_func(minx)
+println("obj_func(minx) = ", minf2)
+println()
+
+q2 = uu->NMRSpectraSimulator.evalitpproxymixture(uu, Es; w = w)
+
+q0_U = q.(U_rad)
+q_U = q2.(U_rad)
+
+PyPlot.figure(fig_num)
+fig_num += 1
+
+PyPlot.plot(P_y, real.(y), label = "y")
+PyPlot.plot(P, real.(q_U), label = "q")
+#PyPlot.plot(P, real.(q3_star_U), "--", label = "run_optim")
+
+PyPlot.legend()
+PyPlot.xlabel("ppm")
+PyPlot.ylabel("real")
+PyPlot.title("r = $(r). nested optim result vs data")
