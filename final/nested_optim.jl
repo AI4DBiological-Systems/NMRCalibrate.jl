@@ -14,8 +14,9 @@ import Interpolations
 
 import NLopt
 import MonotoneMaps
+import Interpolations
 
-#import Clustering
+include("./helpers/warp_helpers.jl")
 
 PyPlot.close("all")
 fig_num = 1
@@ -27,7 +28,10 @@ PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "ser
 # dict = BSON.load(load_path)
 # As = collect( dict[:As][i] for i = 1:length(dict[:As]) )
 
+a_setp, b_setp,
+    minxs, rets = setupitpab(0.1, 10, 0.7; optim_algorithm = :LN_BOBYQA)
 
+@assert 1==2
 
 projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/test_glucose1/"
 #projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/D-(+)-Glucose-700-r3/"
@@ -159,14 +163,14 @@ p_initial = [ -0.11701290729148561;
 # 1.1984875571682057]
 
 ##########
-st_ind_d = 1
-fin_ind_d = st_ind_d + N_d - 1
-updatedfunc = pp->NMRCalibrate.updatemixtured!(As, pp, st_ind_d, fs, SW, shift_constants)
-
-#λupdate.
-st_ind_λ = fin_ind_d + 1
-fin_ind_λ = st_ind_λ + N_λ -1
-updateλfunc = pp->NMRCalibrate.updateλ!(As, pp, st_ind_λ)
+# st_ind_d = 1
+# fin_ind_d = st_ind_d + N_d - 1
+# updatedfunc = pp->NMRCalibrate.updatemixtured!(As, pp, st_ind_d, fs, SW, shift_constants)
+#
+# #λupdate.
+# st_ind_λ = fin_ind_d + 1
+# fin_ind_λ = st_ind_λ + N_λ -1
+# updateλfunc = pp->NMRCalibrate.updateλ!(As, pp, st_ind_λ)
 
 q, updatedfunc, updateλfunc, getshiftfunc, getλfunc, N_vars_set,
 run_optim, obj_func_β, E_BLS, κ_BLS, b_BLS, updateβfunc,

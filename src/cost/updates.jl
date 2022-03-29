@@ -1,3 +1,51 @@
+
+# assume shifts always between [-1,1]
+function updatemixturedwarp!(As::Vector{NMRSpectraSimulator.CompoundFIDType{T,NMRSpectraSimulator.SpinSysFIDType1{T}}},
+    p::Vector{T},
+    st_ind::Int,
+    fs::T,
+    SW::T,
+    #warp_param_set::Vector{Piecewise2DLineType{T}},
+    Δ_shifts::Vector{T},
+    itp_a,
+    itp_b)::Int where T <: Real
+
+    #@assert length(warp_param_set) == length(Δ_shifts)
+
+    j = st_ind - 1
+
+    for n = 1:length(As)
+
+        # first.
+        i = 1
+        j += 1
+        p2 = p[j]*Δ_shifts[j]
+        As[n].ss_params.d[i] = convertΔcstoΔω0(p2, fs, SW)
+
+        # itp.
+        target = convertcompactdomain(p[j], -one(T), one(T), zero(T), one(T))
+        a = itp_a(target)
+        b = itp_b(target)
+
+        for i = 2:length(As[n].ss_params.d)
+            j += 1
+
+            p_j = MonotoneMaps.evalcompositelogisticprobit(p[j], a, b)
+            p2 = p[j]*Δ_shifts[j]
+            As[n].ss_params.d[i] = convertΔcstoΔω0(p2, fs, SW)
+        end
+
+        for i = 1:length(As[n].d_singlets)
+            j += 1
+
+            p2 = p[j]*Δ_shifts[j]
+            As[n].d_singlets[i] = convertΔcstoΔω0(p2, fs, SW)
+        end
+    end
+
+    return j
+end
+
 function updatemixtured!(As::Vector{NMRSpectraSimulator.CompoundFIDType{T,NMRSpectraSimulator.SpinSysFIDType1{T}}},
     p::Vector{T},
     st_ind::Int,
