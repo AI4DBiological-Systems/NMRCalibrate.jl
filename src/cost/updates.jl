@@ -30,7 +30,8 @@ function updatemixturedwarp!(As::Vector{NMRSpectraSimulator.CompoundFIDType{T,NM
         for i = 2:length(As[n].ss_params.d)
             j += 1
 
-            p_j = MonotoneMaps.evalcompositelogisticprobit(p[j], a, b)
+            p_j0 = convertcompactdomain(p[j], -one(T), one(T), zero(T), one(T))
+            p_j = MonotoneMaps.evalcompositelogisticprobit(p_j0, a, b)
             p2 = p[j]*Δ_shifts[j]
             As[n].ss_params.d[i] = convertΔcstoΔω0(p2, fs, SW)
         end

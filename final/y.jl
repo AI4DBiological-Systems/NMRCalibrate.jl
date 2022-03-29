@@ -12,6 +12,8 @@ import .NMRCalibrate
 import OffsetArrays
 import Interpolations
 
+import MultistartOptimization, NLopt
+
 #import Clustering
 
 PyPlot.close("all")
@@ -241,16 +243,32 @@ optim_algorithm = :GN_DIRECT_L
 
 
 
-### packaged up.
+# ## packaged up.
+# run_optim, obj_func3, E_BLS3, κ_BLS3, b_BLS3, updateβfunc3,
+# q3 = NMRCalibrate.setupβLSsolver(optim_algorithm,
+#     Es, As, LS_inds, U_rad_cost, y_cost;
+#     κ_lb_default = 0.2,
+#     κ_ub_default = 5.0,
+#     max_iters = 500,
+#     xtol_rel = 1e-9,
+#     ftol_rel = 1e-9,
+#     maxtime = Inf);
+
+optim_algorithm = NLopt.LN_BOBYQA
+#optim_algorithm = NLopt.GN_ESCH
 run_optim, obj_func3, E_BLS3, κ_BLS3, b_BLS3, updateβfunc3,
-q3 = NMRCalibrate.setupβLSsolver(optim_algorithm,
+q3 = NMRCalibrate.setupβLSsolverMultistartoptim(optim_algorithm,
     Es, As, LS_inds, U_rad_cost, y_cost;
     κ_lb_default = 0.2,
     κ_ub_default = 5.0,
-    max_iters = 500,
+    max_iters = 50,
     xtol_rel = 1e-9,
     ftol_rel = 1e-9,
-    maxtime = Inf);
+    maxtime = Inf,
+    N_starts = 10,
+    inner_xtol_rel = 1e-12,
+    inner_maxeval = 1000,
+    inner_maxtime = Inf);
 
 println("obj_func3(β0) = ", obj_func3(β0))
 
@@ -263,7 +281,21 @@ updateλfunc(p_manual)
 
 println("Timing: run_optim")
 p_β = copy(β0)
-@time minf, minx, ret, N_evals = run_optim(p_β)
+
+minf = NaN
+minx = []
+ret = :NaN
+N_evals = -1
+if typeof(optim_algorithm) == Symbol
+    # using NLopt.
+    @time minf, minx, ret, N_evals = run_optim(p_β)
+else
+    @time p = run_optim(p_β)
+
+    minf = p.value
+    minx = p.location
+    ret = p.ret
+end
 println()
 
 println("obj_func3(minx) = ", obj_func3(minx))
@@ -278,7 +310,7 @@ PyPlot.figure(fig_num)
 fig_num += 1
 
 PyPlot.plot(P_y, real.(y), label = "y")
-PyPlot.plot(P, real.(q_manual_U), label = "q manual")
+#PyPlot.plot(P, real.(q_manual_U), label = "q manual")
 PyPlot.plot(P, real.(q3_star_U), "--", label = "run_optim")
 
 PyPlot.legend()

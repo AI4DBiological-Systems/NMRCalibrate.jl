@@ -24,14 +24,7 @@ fig_num = 1
 Random.seed!(25)
 PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "serif"])
 
-# load_path = "/home/roy/MEGAsync/inputs/NMR/debug/test_As.bson"
-# dict = BSON.load(load_path)
-# As = collect( dict[:As][i] for i = 1:length(dict[:As]) )
 
-a_setp, b_setp,
-    minxs, rets = setupitpab(0.1, 10, 0.7; optim_algorithm = :LN_BOBYQA)
-
-@assert 1==2
 
 projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/test_glucose1/"
 #projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/final/D-(+)-Glucose-700-r3/"
@@ -172,9 +165,14 @@ p_initial = [ -0.11701290729148561;
 # fin_ind_λ = st_ind_λ + N_λ -1
 # updateλfunc = pp->NMRCalibrate.updateλ!(As, pp, st_ind_λ)
 
+a_setp, b_setp,
+    minxs, rets = setupitpab(0.1, 10, 0.7; optim_algorithm = :LN_BOBYQA)
+
+
 q, updatedfunc, updateλfunc, getshiftfunc, getλfunc, N_vars_set,
 run_optim, obj_func_β, E_BLS, κ_BLS, b_BLS, updateβfunc,
-q_β = NMRCalibrate.setupcostnestedλd(Es, As, fs, SW, LS_inds, U_rad_cost, y_cost, Δ_shifts;
+q_β = NMRCalibrate.setupcostnestedλdwarp(Es, As, fs, SW, LS_inds, U_rad_cost,
+    y_cost, Δ_shifts, a_setp, b_setp;
     w = w,
     optim_algorithm = :GN_DIRECT_L,
     κ_lb_default = κ_lb_default,
@@ -189,16 +187,33 @@ Es, As, q, run_optim, E_BLS, κ_BLS, b_BLS, p_β)
 
 grad_func = xx->FiniteDiff.finite_difference_gradient(f, xx)
 
+#optim_algorithm = :LN_BOBYQA
 optim_algorithm = :GN_ESCH
+#optim_algorithm = :GN_ISRES
+#optim_algorithm = :GN_DIRECT_L # larger objective!
 opt = NLopt.Opt(optim_algorithm, length(p_initial))
 
-max_iters = 10
+max_iters = 1000
 xtol_rel = 1e-3
 ftol_rel = 1e-3
 maxtime = Inf
 
 println("obj_func(p_initial) = ", obj_func(p_initial))
 println()
+
+q_U = q.(U_rad)
+
+PyPlot.figure(fig_num)
+fig_num += 1
+
+PyPlot.plot(P_y, real.(y), label = "y")
+PyPlot.plot(P, real.(q_U), label = "q")
+#PyPlot.plot(P, real.(q3_star_U), "--", label = "run_optim")
+
+PyPlot.legend()
+PyPlot.xlabel("ppm")
+PyPlot.ylabel("real")
+PyPlot.title("r = $(r). initial vs data")
 
 println("Starting optim.")
 @time minf, minx, ret, N_evals = NMRCalibrate.runNLopt!(opt,
@@ -219,8 +234,10 @@ println()
 
 q2 = uu->NMRSpectraSimulator.evalitpproxymixture(uu, Es; w = w)
 
-q0_U = q.(U_rad)
+
 q_U = q2.(U_rad)
+# q0_U = q.(U_rad)
+# norm(q_U-q0_U)
 
 PyPlot.figure(fig_num)
 fig_num += 1
@@ -233,3 +250,8 @@ PyPlot.legend()
 PyPlot.xlabel("ppm")
 PyPlot.ylabel("real")
 PyPlot.title("r = $(r). nested optim result vs data")
+
+
+#### next, plot the monotone map. manual do -0.1.
+# visualize Nam Jan 2022 dataset, multi-start ν0_ppm.
+# visualize DMEM, multi-start ν0_ppm.

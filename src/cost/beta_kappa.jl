@@ -1,3 +1,56 @@
+
+"""
+an example of optim_algorithm is NLopt.LN_BOBYQA
+"""
+function setupβLSsolverMultistartoptim(optim_algorithm,
+    Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, SST}},
+    As::Vector{NMRSpectraSimulator.CompoundFIDType{T, SST}},
+    LS_inds,
+    U_rad_cost,
+    y_cost::Vector{Complex{T}};
+    κ_lb_default = 0.2,
+    κ_ub_default = 5.0,
+    max_iters = 50,
+    xtol_rel = 1e-9,
+    ftol_rel = 1e-9,
+    maxtime = Inf,
+    N_starts = 100,
+    inner_xtol_rel = 1e-12,
+    inner_maxeval = 100,
+    inner_maxtime = Inf) where {T,SST}
+
+    #
+    N_β = sum( getNβ(As[n]) for n = 1:length(As) )
+    β_lb = ones(T, N_β) .* (-π)
+    β_ub = ones(T, N_β) .* (π)
+    #β_initial = zeros(T, N_β)
+
+    p_lb = β_lb
+    p_ub = β_ub
+
+    q, updateβfunc, updateκfunc, E_BLS, κ_BLS, b_BLS,
+    getβfunc = setupcostβLS(Es, As, LS_inds, U_rad_cost, y_cost;
+        κ_lb_default = κ_lb_default,
+        κ_ub_default = κ_ub_default)
+
+    f = pp->costβLS(U_rad_cost, y_cost, updateβfunc, updateκfunc, pp, Es,
+    E_BLS, κ_BLS, b_BLS, q)
+
+    P = MultistartOptimization.MinimizationProblem(f,
+        p_lb, p_ub)
+    #
+    local_method = MultistartOptimization.NLoptLocalMethod(; algorithm = optim_algorithm,
+    xtol_rel = inner_xtol_rel,
+    maxeval = inner_maxeval,
+    maxtime = inner_maxtime)
+
+    multistart_method = MultistartOptimization.TikTak(N_starts)
+    run_optim = pp->MultistartOptimization.multistart_minimization(multistart_method,
+        local_method, P)
+
+    return run_optim, f, E_BLS, κ_BLS, b_BLS, updateβfunc, q
+end
+
 function setupβLSsolver(optim_algorithm,
     Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, SST}},
     As::Vector{NMRSpectraSimulator.CompoundFIDType{T, SST}},

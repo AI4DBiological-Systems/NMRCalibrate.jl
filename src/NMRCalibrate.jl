@@ -6,6 +6,8 @@ using LinearAlgebra
 import NLopt
 import BSON, Statistics
 
+import MultistartOptimization
+
 #import NMRData
 import NMRDataSetup # https://github.com/AI4DBiological-Systems/NMRDataSetup.jl
 import BoundedLeastSquares # https://github.com/nboyd/BoundedLeastSquares.jl
@@ -19,6 +21,7 @@ import NMRSpectraSimulator # https://github.com/AI4DBiological-Systems/NMRSpectr
 #
 import NMRSpecifyRegions # https://github.com/AI4DBiological-Systems/NMRSpecifyRegions
 
+import MonotoneMaps # https://github.com/RoyCCWang/MonotoneMaps.jl
 
 include("../src/types.jl")
 include("../src/utils.jl")
