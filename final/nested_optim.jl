@@ -12,7 +12,7 @@ import .NMRCalibrate
 import OffsetArrays
 import Interpolations
 
-import NLopt
+import MultistartOptimization, NLopt
 import MonotoneMaps
 import Interpolations
 
@@ -215,19 +215,44 @@ PyPlot.xlabel("ppm")
 PyPlot.ylabel("real")
 PyPlot.title("r = $(r). initial vs data")
 
-println("Starting optim.")
-@time minf, minx, ret, N_evals = NMRCalibrate.runNLopt!(opt,
-    p_initial,
-    obj_func,
-    grad_func,
-    p_lb,
-    p_ub;
-    max_iters = max_iters,
-    xtol_rel = xtol_rel,
-    ftol_rel = ftol_rel,
-    maxtime = maxtime)
+# println("Starting optim.")
+# @time minf, minx, ret, N_evals = NMRCalibrate.runNLopt!(opt,
+#     p_initial,
+#     obj_func,
+#     grad_func,
+#     p_lb,
+#     p_ub;
+#     max_iters = max_iters,
+#     xtol_rel = xtol_rel,
+#     ftol_rel = ftol_rel,
+#     maxtime = maxtime)
 
 #
+println("Starting multi-start optim")
+N_starts = 100
+optim_algorithm = NLopt.LN_BOBYQA
+xtol_rel = 1e-3
+maxeval = 100
+maxtime = Inf
+
+prob = MultistartOptimization.MinimizationProblem(obj_func, p_lb, p_ub)
+
+local_method = MultistartOptimization.NLoptLocalMethod(; algorithm = optim_algorithm,
+xtol_rel = xtol_rel,
+maxeval = maxeval,
+maxtime = maxtime)
+
+multistart_method = MultistartOptimization.TikTak(N_starts)
+@time ret_mo = MultistartOptimization.multistart_minimization(multistart_method,
+    local_method, prob)
+#
+minf = ret_mo.value
+minx = ret_mo.location
+ret = ret_mo.ret
+# 1249 secs.
+#
+#minx = [-0.09; -0.1; 1.1; 1.1] # a good answer.
+
 minf2 = obj_func(minx)
 println("obj_func(minx) = ", minf2)
 println()
