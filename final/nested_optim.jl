@@ -275,8 +275,3 @@ PyPlot.legend()
 PyPlot.xlabel("ppm")
 PyPlot.ylabel("real")
 PyPlot.title("r = $(r). nested optim result vs data")
-
-
-#### next, plot the monotone map. manual do -0.1.
-# visualize Nam Jan 2022 dataset, multi-start ν0_ppm.
-# visualize DMEM, multi-start ν0_ppm.

@@ -1,4 +1,56 @@
 
+function applywarptoshifts(p::Vector{T},
+    As,
+    st_ind::Int,
+    Δ_shifts,
+    itp_a,
+    itp_b) where T <: Real
+
+    x = similar(p)
+    applywarptoshifts!(x, As, p, st_ind, Δ_shifts, itp_a, itp_b)
+
+    return x
+end
+
+function applywarptoshifts!(x::Vector{T},
+    As,
+    p::Vector{T},
+    st_ind::Int,
+    Δ_shifts,
+    itp_a,
+    itp_b) where T <: Real
+
+    j = st_ind - 1
+
+    for n = 1:length(As)
+
+        # first.
+        i = 1
+        j += 1
+        x[j] = p[j]
+
+        # itp.
+        target = convertcompactdomain(p[j], -one(T), one(T), zero(T), one(T))
+        a = itp_a(target)
+        b = itp_b(target)
+
+        for i = 2:length(As[n].ss_params.d)
+            j += 1
+
+            p_j0 = convertcompactdomain(p[j], -one(T), one(T), zero(T), one(T))
+            x[j] = MonotoneMaps.evalcompositelogisticprobit(p_j0, a, b)
+        end
+
+        for i = 1:length(As[n].d_singlets)
+            j += 1
+
+            x[j] = p[j]
+        end
+    end
+
+    return j
+end
+
 # assume shifts always between [-1,1]
 function updatemixturedwarp!(As::Vector{NMRSpectraSimulator.CompoundFIDType{T,NMRSpectraSimulator.SpinSysFIDType1{T}}},
     p::Vector{T},
@@ -12,37 +64,10 @@ function updatemixturedwarp!(As::Vector{NMRSpectraSimulator.CompoundFIDType{T,NM
 
     #@assert length(warp_param_set) == length(Δ_shifts)
 
-    j = st_ind - 1
+    j1 = applywarptoshifts!(p, As, p, st_ind, Δ_shifts, itp_a, itp_b)
+    j = updatemixtured!(As, p, st_ind, fs, SW, Δ_shifts)
 
-    for n = 1:length(As)
-
-        # first.
-        i = 1
-        j += 1
-        p2 = p[j]*Δ_shifts[j]
-        As[n].ss_params.d[i] = convertΔcstoΔω0(p2, fs, SW)
-
-        # itp.
-        target = convertcompactdomain(p[j], -one(T), one(T), zero(T), one(T))
-        a = itp_a(target)
-        b = itp_b(target)
-
-        for i = 2:length(As[n].ss_params.d)
-            j += 1
-
-            p_j0 = convertcompactdomain(p[j], -one(T), one(T), zero(T), one(T))
-            p_j = MonotoneMaps.evalcompositelogisticprobit(p_j0, a, b)
-            p2 = p[j]*Δ_shifts[j]
-            As[n].ss_params.d[i] = convertΔcstoΔω0(p2, fs, SW)
-        end
-
-        for i = 1:length(As[n].d_singlets)
-            j += 1
-
-            p2 = p[j]*Δ_shifts[j]
-            As[n].d_singlets[i] = convertΔcstoΔω0(p2, fs, SW)
-        end
-    end
+    @assert j1 == j # debug.
 
     return j
 end
