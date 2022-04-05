@@ -171,9 +171,9 @@ a_setp, b_setp,
     minxs, rets = setupitpab(0.1, 10, 0.7; optim_algorithm = :LN_BOBYQA)
 
 
-q, updatedfunc, updateλfunc, getshiftfunc, getλfunc, N_vars_set,
+q, updatedfunc, getshiftfunc, N_vars_set,
 run_optim, obj_func_β, E_BLS, κ_BLS, b_BLS, updateβfunc,
-q_β = NMRCalibrate.setupcostnestedλdwarp(Es, As, fs, SW, LS_inds, U_rad_cost,
+q_β = NMRCalibrate.setupcostnesteddwarp(Es, As, fs, SW, LS_inds, U_rad_cost,
     y_cost, Δ_shifts, a_setp, b_setp;
     w = w,
     optim_algorithm = :GN_DIRECT_L,
@@ -184,10 +184,38 @@ q_β = NMRCalibrate.setupcostnestedλdwarp(Es, As, fs, SW, LS_inds, U_rad_cost,
     ftol_rel = 1e-9,
     maxtime = Inf)
 
-obj_func = pp->NMRCalibrate.costnestedλd(U_rad_cost, y_cost, updatedfunc, updateλfunc, pp,
+obj_func = pp->NMRCalibrate.costnestedd(U_rad_cost, y_cost, updatedfunc, updateλfunc, pp,
 Es, As, q, run_optim, E_BLS, κ_BLS, b_BLS, p_β)
 
 grad_func = xx->FiniteDiff.finite_difference_gradient(f, xx)
+
+# x = similar(p_initial)
+# p_test = randn(length(p_initial))
+# NMRCalibrate.applywarptoshifts!(x, As, p_initial, 1, Δ_shifts, a_setp, b_setp)
+#
+# target = NMRCalibrate.convertcompactdomain(p_initial[1], -1., 1., 0., 1.)
+# a = a_setp(target)
+# b = b_setp(target)
+#
+# import MonotoneMaps
+# q = tt->MonotoneMaps.evalcompositelogisticprobit(tt, a, b, -1.0, 1.0)
+#
+#
+# x = LinRange(-1 + 1e-2, 1 - 1e-2, 500)
+#
+# PyPlot.figure(fig_num)
+# fig_num += 1
+#
+# ax = PyPlot.axes()
+# ax[:set_ylim]([-1,1])
+# PyPlot.plot(x, q.(x), label = "q")
+#
+# PyPlot.legend()
+# PyPlot.xlabel("x")
+# PyPlot.ylabel("q")
+# PyPlot.title("evalcompositelogisticprobit()")
+#
+# @assert 1==11701290729148561
 
 #optim_algorithm = :LN_BOBYQA
 optim_algorithm = :GN_ESCH

@@ -37,8 +37,7 @@ function applywarptoshifts!(x::Vector{T},
         for i = 2:length(As[n].ss_params.d)
             j += 1
 
-            p_j0 = convertcompactdomain(p[j], -one(T), one(T), zero(T), one(T))
-            x[j] = MonotoneMaps.evalcompositelogisticprobit(p_j0, a, b)
+            x[j] = MonotoneMaps.evalcompositelogisticprobit(p[j], a, b, -one(T), one(T))
         end
 
         for i = 1:length(As[n].d_singlets)

@@ -13,7 +13,7 @@ function setupitpab(window::T, N_itp_samples::Int, input_range_percentage::T;
     optim_algorithm = :LN_BOBYQA) where T <: Real
 
     # get piece-wise linear monotone maps.
-    infos, zs, p_range = MonotoneMaps.prepareboxboundwarping(zero(T), one(T), window; N_itp_samples = N_itp_samples, input_range_percentage = input_range_percentage)
+    infos, zs, p_range = MonotoneMaps.getendomorphismpiecewiselinear(zero(T), one(T), window; N_itp_samples = N_itp_samples, input_range_percentage = input_range_percentage)
 
     # get compact sigmoid parameters fitted to each of the piece-wise linear maps.
     costfuncs, minxs, rets = MonotoneMaps.getcompactsigmoidparameters(infos;
