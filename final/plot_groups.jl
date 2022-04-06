@@ -1,4 +1,4 @@
-
+### I Am here. move this to NMRSpectraSimulator.
 
 using LinearAlgebra, FFTW
 import BSON, Statistics, Random

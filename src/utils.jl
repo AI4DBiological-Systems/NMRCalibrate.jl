@@ -47,20 +47,7 @@ function viewaverageΔc(A::NMRSpectraSimulator.CompoundFIDType{T,SST}) where {T,
     return out
 end
 
-function findfreqrange(As::Vector{NMRSpectraSimulator.CompoundFIDType{T,SST}}, hz2ppmfunc) where {T,SST}
 
-    ΩS_ppm = Vector{Vector{T}}(undef, length(As))
-
-    for (n,A) in enumerate(As)
-
-        ΩS_ppm[n] = hz2ppmfunc.( NMRSpectraSimulator.combinevectors(A.Ωs) ./ (2*π) )
-
-        tmp = hz2ppmfunc.( A.Ωs_singlets ./ (2*π) )
-        push!(ΩS_ppm[n], tmp...)
-    end
-
-    return ΩS_ppm
-end
 
 function mergeinds(inds_set::Vector{Vector{Int}}, merge_set) where T
 

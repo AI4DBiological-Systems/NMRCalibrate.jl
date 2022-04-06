@@ -11,8 +11,8 @@ function prepareoptim(cs_config_path,
     cs_delta_group = NMRSpecifyRegions.extractinfofromconfig( cs_config_path, molecule_names)
     Δsys_cs = NMRSpecifyRegions.condenseΔcsconfig(cs_delta_group)
 
-    ΩS0 = NMRSpecifyRegions.getΩS(As)
-    ΩS0_ppm = NMRSpecifyRegions.getPs(ΩS0, hz2ppmfunc)
+    ΩS0 = NMRSpectraSimulator.getΩS(As)
+    ΩS0_ppm = NMRSpectraSimulator.getPs(ΩS0, hz2ppmfunc)
 
     exp_info = NMRSpecifyRegions.setupexperimentresults(molecule_names, ΩS0_ppm, Δsys_cs;
     min_dist = region_min_dist)

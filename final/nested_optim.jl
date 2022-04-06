@@ -229,7 +229,8 @@ PyPlot.title("r = $(r). initial vs data")
 
 #
 println("Starting multi-start optim")
-N_starts = 100
+N_starts = 100 # bad.
+#N_starts = 200 # good.
 optim_algorithm = NLopt.LN_BOBYQA
 xtol_rel = 1e-3
 maxeval = 100

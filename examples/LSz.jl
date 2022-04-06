@@ -66,7 +66,7 @@ offset_Hz = ν_0ppm - (ppm2hzfunc(0.3)-ppm2hzfunc(0.0))
 
 N = length(s_t)
 DFT_s = fft(s_t)
-U_DFT, U_y, U_inds = NMRCalibrate.getwraparoundDFTfreqs(N, fs, offset_Hz)
+U_DFT, U_y, U_inds = NMRDataSetup.getwraparoundDFTfreqs(N, fs, offset_Hz)
 
 Z = maximum(abs.(DFT_s))
 y = DFT_s[U_inds] ./ Z
