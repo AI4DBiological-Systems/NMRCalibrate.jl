@@ -125,7 +125,7 @@ function updatew!(  A::Matrix{T},
     b::Vector{T},
     w::Vector{T},
     U_LS,
-    Es::Vector{NMRSpectraSimulator.CompoundFIDType{T,SST}},
+    Es::Vector{NMRSpectraSimulator.FIDModelType{T,SST}},
     w_lower::Vector{T},
     w_upper::Vector{T}) where {T <: Real, SST}
 
@@ -146,7 +146,7 @@ end
 
 function evaldesignmatrixw!(B::Matrix{T},
     U,
-    Es::Vector{NMRSpectraSimulator.CompoundFIDType{T,SST}}) where {T <: Real, SST}
+    Es::Vector{NMRSpectraSimulator.FIDModelType{T,SST}}) where {T <: Real, SST}
 
     #
     M = length(U)
@@ -173,7 +173,7 @@ function updateκ!(  A::Matrix{T},
     b::Vector{T},
     κ::Vector{T},
     U_LS,
-    Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T,SST}},
+    Es::Vector{NMRSpectraSimulator.καFIDModelType{T,SST}},
     w::Vector{T},
     κ_lower::Vector{T},
     κ_upper::Vector{T}) where {T <: Real,SST}
@@ -208,7 +208,7 @@ end
 
 function evaldesignmatrixκ!(B::Matrix{T},
     U,
-    Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T,NMRSpectraSimulator.SpinSysFIDType1{T}}},
+    Es::Vector{NMRSpectraSimulator.καFIDModelType{T,NMRSpectraSimulator.SpinSysParamsType1{T}}},
     w::Vector{T}) where T <: Real
 
     #
@@ -282,7 +282,7 @@ end
 
 function evaldesignmatrixκ!(B::Matrix{T}, r_buffer_unused::Vector{T},
     U,
-    Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T,NMRSpectraSimulator.SpinSysFIDType2{T}}},
+    Es::Vector{NMRSpectraSimulator.καFIDModelType{T,NMRSpectraSimulator.SpinSysParamsType2{T}}},
     w::Vector{T}) where T <: Real
 
     #

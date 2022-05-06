@@ -24,21 +24,26 @@ Random.seed!(25)
 PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "serif"])
 
 ### user inputs.
+# 0.1% DSS is 0.0046 M = 4.6 mM.
 projects_dir = "/home/roy/MEGAsync/outputs/NMR/calibrate/"
 
 # project_name = "glucose-700"
 # molecule_names = ["D-(+)-Glucose"; "DSS"]
-# w = [20.0/4.6; 1.0] # BMRB-700 glucose: DSS is 0.0046 M = 4.6 mM.
+# w = [20.0/4.6; 1.0] # BMRB-700 glucose: DSS is 0.1 % => 4.6 mM
 
-project_name = "Nam-Jan2022"
+project_name = "glucose-700-1" # -1 for only the solute.
+molecule_names = ["D-(+)-Glucose";]
+w = [1.0; ] # BMRB-700 glucose: DSS is 0.1 % => 4.6 mM
 
-# molecule_names = ["L-Serine"; "L-Glutamine"]
-# w = [1.0; 1.0] # BMRB-700 phenylalanine: DSS is 500 micro M.
-# #w = w ./ norm(w)
+# project_name = "isoleucine-700"
+# molecule_names = ["L-Isoleucine"; "DSS"]
+# w = [20.0/46; 1.0] # BMRB-700 glucose: DSS is 1 % => 46 mM
 
-molecule_names = ["L-Serine"; "D-(+)-Glucose"]
-w = [1.0; 1.0] # BMRB-700 phenylalanine: DSS is 500 micro M.
+# project_name = "phenylalanine-700"
+# molecule_names = ["L-Phenylalanine"; "DSS"]
+# w = [20/0.5; 1.0] # BMRB-700 phenylalanine: DSS is 500 micro M.
 
+w = w ./ norm(w) # since the fit data, y, is normalized.
 
 # path to the GISSMO Julia storage folder.
 base_path_JLD = "/home/roy/Documents/repo/NMRData//src/input/molecules"
@@ -101,14 +106,15 @@ PyPlot.title("data spectra")
 
 Δcs_max_mixture = collect( Δcs_max for i = 1:length(molecule_names))
 
-mixture_params = NMRSpectraSimulator.setupmixtureproxies(molecule_names,
+println("Timing: setupmixtureproxies()")
+@time mixture_params = NMRSpectraSimulator.setupmixtureproxies(molecule_names,
     base_path_JLD, Δcs_max_mixture, hz2ppmfunc, ppm2hzfunc, fs, SW, λ0,
     ν_0ppm, dummy_SSFID;
     tol_coherence = tol_coherence,
     α_relative_threshold = α_relative_threshold)
 As = mixture_params
 
-ΩS_ppm = NMRCalibrate.findfreqrange(As, hz2ppmfunc)
+ΩS_ppm = NMRSpectraSimulator.getPsnospininfo(As, hz2ppmfunc)
 ΩS_ppm_sorted = sort(NMRSpectraSimulator.combinevectors(ΩS_ppm))
 
 # u_min = ppm2hzfunc(-0.5)
@@ -118,7 +124,8 @@ u_offset = 0.5
 u_min = ppm2hzfunc(ΩS_ppm_sorted[1] - u_offset)
 u_max = ppm2hzfunc(ΩS_ppm_sorted[end] + u_offset)
 
-NMRSpectraSimulator.fitproxies!(As;
+println("Timing: fitproxies!()")
+@time NMRSpectraSimulator.fitproxies!(As;
 #NMRSpectraSimulator.fitproxiessimple!(As;
     κ_λ_lb = κ_λ_lb,
     κ_λ_ub = κ_λ_ub,
@@ -136,29 +143,28 @@ cs_config_path = "/home/roy/MEGAsync/inputs/NMR/configs/reduced_cs_config.txt"
 cost_inds_set = NMRCalibrate.prepareoptim(cs_config_path, molecule_names, hz2ppmfunc,
 U_y, y, As; region_min_dist = 0.1)
 
-
 # visualize cost regions.
 # sort(P_cost_set[1]) # etc..
 P_cost_set = collect( P_y[cost_inds_set[r]] for r = 1:length(cost_inds_set) )
 
 
 # ### just optim region r.
-r = 3
-y_cost = y[cost_inds_set[r]]
-U_cost = U_y[cost_inds_set[r]]
-P_cost = P_y[cost_inds_set[r]]
+# r = 4 # 7
+# y_cost = y[cost_inds_set[r]]
+# U_cost = U_y[cost_inds_set[r]]
+# P_cost = P_y[cost_inds_set[r]]
 
 # ### just optim a few regions.
-# R = [1; 2; 3]
-# m_inds = mergeinds(cost_inds_set, R)
-# y_cost = y[m_inds...]
-# U_cost = U_y[m_inds...]
-# P_cost = P_y[m_inds...]
+# R = [4; 5; 6; 7] #[1; 2; 3]
+# m_inds = NMRCalibrate.mergeinds(cost_inds_set, R)
+# y_cost = y[m_inds]
+# U_cost = U_y[m_inds]
+# P_cost = P_y[m_inds]
 
-# ### optim all regions. # 900 secs.
-# y_cost = y_cost_all
-# U_cost = U_cost_all
-# P_cost = P_cost_all
+### optim all regions. # 900 secs.
+y_cost = y_cost_all
+U_cost = U_cost_all
+P_cost = P_cost_all
 
 PyPlot.figure(fig_num)
 fig_num += 1
@@ -171,6 +177,8 @@ PyPlot.xlabel("ppm")
 PyPlot.ylabel("real")
 PyPlot.title("positions against data spectrum, real part")
 
+#@assert 1==2
+
 Δ_shifts = NMRSpectraSimulator.combinevectors(Δsys_cs)
 
 ##### set up updates.
@@ -180,8 +188,6 @@ U = ppm2hzfunc.(P)
 #ΩS_ppm = collect( hz2ppmfunc.( NMRSpectraSimulator.combinevectors(A.Ωs) ./ (2*π) ) for A in mixture_params )
 
 
-# lorentzian (oracle/ground truth)
-f = uu->NMRSpectraSimulator.evalmixture(uu, mixture_params)
 
 U_LS = U
 
@@ -213,31 +219,37 @@ p_initial = [zeros(N_d); zeros(N_β); ones(N_λ)]
 #updateκfunc(p_initial)
 fill!(κ_BLS, 1.0)
 
-### plot.
-
-#f_U = f.(U)
 q_U = q.(U)
-### for now.
-# discrepancy = abs.(f_U-q_U)
-# max_val, ind = findmax(discrepancy)
-# println("relative discrepancy = ", norm(discrepancy)/norm(f_U))
-# println("max discrepancy: ", max_val)
-# println()
-#
-# PyPlot.figure(fig_num)
-# fig_num += 1
-#
-# PyPlot.plot(P, real.(f_U), label = "f")
-# PyPlot.plot(P, real.(q_U), "--", label = "q")
-#
-# PyPlot.legend()
-# PyPlot.xlabel("ppm")
-# PyPlot.ylabel("real")
-# PyPlot.title("f vs q")
 
+### plot. # disable if using fitproxiessimple.
+# lorentzian (oracle/ground truth)
+f = uu->NMRSpectraSimulator.evalmixture(uu, mixture_params, w = w)
+f_U = f.(U)
 
+## for now.
+discrepancy = abs.(f_U-q_U)
+max_val, ind = findmax(discrepancy)
+println("relative discrepancy = ", norm(discrepancy)/norm(f_U))
+println("max discrepancy: ", max_val)
+println()
 
-# @assert 1==2
+PyPlot.figure(fig_num)
+fig_num += 1
+
+PyPlot.plot(P, real.(f_U), label = "f")
+PyPlot.plot(P, real.(q_U), "--", label = "q")
+
+PyPlot.legend()
+PyPlot.xlabel("ppm")
+PyPlot.ylabel("real")
+PyPlot.title("f vs q")
+
+κ_lb_default = 0.2
+κ_ub_default = 50.0
+
+# # @assert 1==2
+
+## fit model.
 println("Timing: runalignment()")
 @time p_star, q, κ_BLS, getshiftfunc, getβfunc, getλfunc,
 obj_func, N_vars_set = NMRCalibrate.runalignment(Δ_shifts,
@@ -246,10 +258,19 @@ max_iters = 50000,
 xtol_rel = 1e-7,
 ftol_rel = 1e-12,
 w = w,
-κ_lb_default = 0.2,
-κ_ub_default = 50.0,
+κ_lb_default = κ_lb_default,
+κ_ub_default = κ_ub_default,
 λ_each_lb = 0.9,
 λ_each_ub = 1.1)
+
+### save block.
+save_path = joinpath(joinpath(projects_dir, project_name), "results.bson")
+BSON.bson(save_path,
+p_star = p_star,
+κ_lb_default = κ_lb_default,
+κ_ub_default = κ_ub_default,
+κ_star = κ_BLS)
+## end save block.
 
 d_star = getshiftfunc(p_star)
 β_star = getβfunc(p_star)
@@ -259,48 +280,3 @@ println("β_star = ", β_star)
 println("λ_star = ", λ_star)
 println("κ_BLS = ", κ_BLS)
 println()
-
-### reference.
-
-# reference, zero shift, phase.
-p_test = zeros(sum(N_vars_set))
-initial_cost = obj_func(p_test)
-q_initial_U = q.(U)
-
-p_test = copy(p_star)
-final_cost = obj_func(p_test)
-q_final_U = q.(U)
-
-
-PyPlot.figure(fig_num)
-fig_num += 1
-
-
-PyPlot.plot(P_y, real.(y), label = "y")
-PyPlot.plot(P_cost, real.(y_cost), "x")
-
-PyPlot.legend()
-PyPlot.xlabel("ppm")
-PyPlot.ylabel("real")
-PyPlot.title("cost vs. data (y)")
-
-
-PyPlot.figure(fig_num)
-fig_num += 1
-
-PyPlot.plot(P, real.(q_initial_U), label = "q initial")
-PyPlot.plot(P_y, real.(y), label = "y")
-PyPlot.plot(P, real.(q_final_U), "--", label = "q final")
-#PyPlot.plot(P_cost, real.(y_cost), "x")
-
-PyPlot.legend()
-PyPlot.xlabel("ppm")
-PyPlot.ylabel("real")
-PyPlot.title("data (y) vs. fit")
-
-
-
-####################
-
-
-#include("del.jl") # explore here.

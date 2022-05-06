@@ -42,7 +42,7 @@ function updatew!(  A::Matrix{Complex{T}},
     b,
     w::Vector{T},
     U_rad_LS,
-    Es::Vector{NMRSpectraSimulator.CompoundFIDType{T,SST}},
+    Es::Vector{NMRSpectraSimulator.FIDModelType{T,SST}},
     w_lower::Vector{T},
     w_upper::Vector{T}) where {T <: Real, SST}
 
@@ -62,7 +62,7 @@ end
 
 function evaldesignmatrixw!(B::Matrix{Complex{T}},
     U_rad,
-    Es::Vector{NMRSpectraSimulator.CompoundFIDType{T,SST}}) where {T <: Real, SST}
+    Es::Vector{NMRSpectraSimulator.FIDModelType{T,SST}}) where {T <: Real, SST}
 
     #
     M = length(U_rad)
@@ -85,20 +85,21 @@ end
 ######### κ, compensation for α.
 
 
-function updateκ!(  A::Matrix{Complex{T}},
+function updateκ2!(  A::Matrix{Complex{T}},
     #r_buffer::Vector{T},
     b,
     κ::Vector{T},
     U_rad_LS,
-    Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T,SST}},
+    Es,
+    As,
     w::Vector{T},
     κ_lower::Vector{T},
-    κ_upper::Vector{T}) where {T <: Real,SST}
+    κ_upper::Vector{T}) where T <: Real
 
     #@assert size(A) == (length(b), length(αS))
     @assert length(b) == 2*length(U_rad_LS)
 
-    evaldesignmatrixκ!(A, U_rad_LS, Es, w)
+    evaldesignmatrixκ!(A, U_rad_LS, Es, As, w)
 
     ### LS solve.
     # w[:] = NonNegLeastSquares.nonneg_lsq(A, b; alg = :fnnls)
@@ -114,7 +115,8 @@ end
 
 function evaldesignmatrixκ!(B::Matrix{Complex{T}},
     U_rad,
-    Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T,NMRSpectraSimulator.SpinSysFIDType1{T}}},
+    Es,
+    As,
     w::Vector{T}) where T <: Real
 
     #
@@ -123,23 +125,24 @@ function evaldesignmatrixκ!(B::Matrix{Complex{T}},
 
     N_κ, N_κ_singlets = countκ(Es)
     @assert size(B) == (M, N_κ + N_κ_singlets)
-    #fill!(B, Inf) # debug.
+    fill!(B, Inf) # debug.
 
     resetκ!(Es)
     j = 0
 
     # loop over each κ partition element in Es.
     for n = 1:N
-        A = Es[n]
-        @assert length(A.κs_α) == length(A.core.qs)
+        E = Es[n]
+        A = As[n]
+        @assert length(E.κs_α) == length(E.core.qs)
 
         #spin system.
-        #for i = 1:length(A.κs_α)
-        for i in eachindex(A.κs_α)
+        #for i = 1:length(E.κs_α)
+        for i in eachindex(E.κs_α)
 
             # partition
-            #for k = 1:length(A.κs_α[i])
-            for k in eachindex(A.κs_α[i])
+            #for k = 1:length(E.κs_α[i])
+            for k in eachindex(E.κs_α[i])
 
                 j += 1
 
@@ -147,39 +150,43 @@ function evaldesignmatrixκ!(B::Matrix{Complex{T}},
                 # for m = 1:M
                 #
                 #     # taken from evalitproxysys()
-                #     r = U_rad[m] - A.core.ss_params.d[i]
+                #     r = U_rad[m] - E.core.ss_params.d[i]
                 #
-                #     #B[m,j] = w[n]*A.core.qs[i][k](r, A.core.ss_params.κs_λ[i])
-                #     #w[n]*A.core.qs[i][k](r, A.core.ss_params.κs_λ[i])
+                #     #B[m,j] = w[n]*E.core.qs[i][k](r, E.core.ss_params.κs_λ[i])
+                #     #w[n]*E.core.qs[i][k](r, E.core.ss_params.κs_λ[i])
                 #     #B[m,j] = 1.9
                 #
-                #     out = w[n]*A.core.qs[i][k](r, A.core.ss_params.κs_λ[i])
+                #     out = w[n]*E.core.qs[i][k](r, E.core.ss_params.κs_λ[i])
                 #
-                #     #Q[j,m] = w[n]*A.core.qs[i][k](r, A.core.ss_params.κs_λ[i])
+                #     #Q[j,m] = w[n]*E.core.qs[i][k](r, E.core.ss_params.κs_λ[i])
                 # end
 
-                #out = collect( w[n]*A.core.qs[i][k](U_rad[m] - A.core.ss_params.d[i], A.core.ss_params.κs_λ[i]) for m = 1:M )
-                B[:,j] = collect( w[n]*A.core.qs[i][k](U_rad[m] - A.core.ss_params.d[i], A.core.ss_params.κs_λ[i]) for m = 1:M )
-
+                #out = collect( w[n]*E.core.qs[i][k](U_rad[m] - E.core.ss_params.d[i], E.core.ss_params.κs_λ[i]) for m = 1:M )
+                B[:,j] = collect( w[n]*E.core.qs[i][k](U_rad[m] - E.core.ss_params.d[i], E.core.ss_params.κs_λ[i]) for m = 1:M )
             end
         end
 
         # singlets.
-        for k = 1:length(A.κs_α_singlets)
+        for k = 1:length(E.κs_α_singlets)
             j += 1
 
             # for m = 1:M
             #
-            #     B[m,j] = w[n]*NMRSpectraSimulator.evalκsinglets(U_rad[m], A.core.d_singlets,
-            #     A.core.αs_singlets, A.core.Ωs_singlets,
-            #     A.core.β_singlets, A.core.λ0, A.core.κs_λ_singlets)
+            #     B[m,j] = w[n]*NMRSpectraSimulator.evalsinglets(U_rad[m], E.core.d_singlets,
+            #     A.αs_singlets, A.Ωs_singlets,
+            #     E.core.β_singlets, E.core.λ0, E.core.κs_λ_singlets, E.κs_α_singlets)
             # end
-            B[:,j] = collect( w[n]*NMRSpectraSimulator.evalκsinglets(U_rad[m], A.core.d_singlets,
-                A.core.αs_singlets, A.core.Ωs_singlets,
-                A.core.β_singlets, A.core.λ0, A.core.κs_λ_singlets) for m = 1:M )
-        end
 
+            B[:,j] = collect( w[n]*NMRSpectraSimulator.evalsinglets(U_rad[m], E.core.d_singlets,
+            A.αs_singlets, A.Ωs_singlets,
+            E.core.β_singlets, E.core.λ0, E.core.κs_λ_singlets, E.κs_α_singlets) for m = 1:M )
+
+
+        end
     end
+
+    #println("all(isfinite.(B)) = ", all(isfinite.(B)))
+    @assert all(isfinite.(B))
 
     return nothing
 end

@@ -1,4 +1,38 @@
 
+"""
+updates B.ss_params.κs_β for the spin system portion of compound B.
+"""
+# function updateβ!(B::NMRSpectraSimulator.FIDModelType{T,SST},
+#     ME::Vector{Vector{Vector{Int}}},
+#     p::Vector{T},
+#     j_st::Int)::Int where {T <: Real, SST}
+#
+#     # must have the same number of spin systems.
+#     @assert length(ME) == length(B.ss_params.κs_β)
+#
+#     j = j_st
+#     for i = 1:length(B.ss_params.κs_β)
+#         #for l = 1:length(B.ss_params.κs_β[i])
+#
+#         if isempty(ME[i])
+#             for l = 1:length(B.ss_params.κs_β[i])
+#                 j += 1
+#
+#                 B.ss_params.κs_β[i][l] = p[j]
+#             end
+#         else
+#
+#             for dest_inds in ME[i]
+#                 j += 1
+#
+#                 B.ss_params.κs_β[i][l] = p[j]
+#             end
+#         end
+#     end
+#
+#     return j
+# end
+
 function calibrateregions( y::Vector{Complex{T}},
     U_y, P_y, cost_inds_set, Δ_shifts, As, fs, SW::T, w;
     max_iters = 5000,

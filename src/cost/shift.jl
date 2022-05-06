@@ -32,50 +32,37 @@ function costcLshift(U_rad,
     return cost
 end
 
-function setupcostcLshiftLS(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, SST}},
-    As::Vector{NMRSpectraSimulator.CompoundFIDType{T, SST}},
+# WIP.
+function setupcostalign0(Es::Vector{NMRSpectraSimulator.καFIDModelType{T, SST}},
+    Bs::Vector{NMRSpectraSimulator.FIDModelType{T, SST}},
+    As::Vector{NMRSpectraSimulator.SHType{T}},
+    κs_β_orderings::Vector{Vector{Vector{Int}}},
+    κs_β_DOFs::Vector{Vector{Int}},
     fs::T,
     SW::T,
     LS_inds,
     U0_rad,
     y0::Vector{Complex{T}},
-    shift_constants;
-    w = ones(T, length(Es)),
-    κ_lb_default = 0.2,
-    κ_ub_default = 5.0) where {T <: Real, SST}
-
-    #N = length(ΩS0)
-    #@assert length(ΩS0) == length(αS) == length(w_lb) == length(w_ub)
-
-    ## allocate buffers.
-    #U_rad_LS = U0[LS_inds] .* (2*π)
-    #A, w_BLS = setupLSwcL(U_rad_LS, αS)
-    #
-    #tmp = S_U0[LS_inds]
-    #LS_b = [real.(tmp); imag(tmp)]
+    Δsys_cs::Vector{Vector{T}};
+    w = ones(T, length(Es))) where {T <: Real, SST}
 
     # model.
-    f = uu->NMRSpectraSimulator.evalitpproxymixture(uu, Es; w = w)
+    f = uu->NMRSpectraSimulator.evalitpproxymixture(uu, Bs, Es; w = w)
 
     ##### update functions.
-    N_d = sum( getNd(As[n]) for n = 1:length(As) )
-    N_β = sum( getNβ(As[n]) for n = 1:length(As) )
-    N_λ = sum( getNλ(As[n]) for n = 1:length(As) )
+    N_d = sum( getNd(Bs[n]) for n = 1:length(Bs) )
+    N_β = sum( getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
 
     st_ind_d = 1
     fin_ind_d = st_ind_d + N_d - 1
-    updatedfunc = pp->updatemixtured!(As, pp, st_ind_d, fs, SW, shift_constants)
+    updatedfunc = pp->updatemixtured!(Bs,
+        p, st_ind, fs, SW, Δsys_cs)
 
     st_ind_β = fin_ind_d + 1
     fin_ind_β = st_ind_β + N_β - 1
-    updateβfunc = pp->updateβ!(As, pp, st_ind_β)
+    updateβfunc = pp->updateβ!(Bs, pp, st_ind_β)
 
-    #λupdate.
-    st_ind_λ = fin_ind_β + 1
-    fin_ind_λ = st_ind_λ + N_λ -1
-    updateλfunc = pp->updateλ!(As, pp, st_ind_λ)
-
-    N_vars_set = [N_d; N_β; N_λ]
+    N_vars_set = [N_d; N_β]
 
     ### LS κ.
     U_rad_LS = U0_rad[LS_inds]

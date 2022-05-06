@@ -2,7 +2,7 @@ function trydiffΔcradius(Δc_partition_radius_candidates::Vector{T},
     molecule_names, base_path_JLD, Δcs_max_mixture, hz2ppmfunc, ppm2hzfunc,
     fs, SW, λ0, ν_0ppm, early_exit_part_size, Δcs_max, tol_coherence,
     α_relative_threshold,
-    dummy_SSFID::SST)::Tuple{Vector{NMRSpectraSimulator.CompoundFIDType{T,SST}}, T} where {T <: Real, SST}
+    dummy_SSFID::SST)::Tuple{Vector{NMRSpectraSimulator.FIDModelType{T,SST}}, T} where {T <: Real, SST}
 
     @assert early_exit_part_size > 0
     @assert all(Δc_partition_radius_candidates .> zero(T))
@@ -19,7 +19,7 @@ function trydiffΔcradius(Δc_partition_radius_candidates::Vector{T},
             Δc_partition_radius = Δc_partition_radius)
         As = mixture_params
 
-        if all( all(NMRCalibrate.displaypartitionsizes(As[n]) .<= early_exit_part_size) for n = 1:length(As) )
+        if all( all(displaypartitionsizes(As[n]) .<= early_exit_part_size) for n = 1:length(As) )
             return mixture_params, Δc_partition_radius
         end
     end

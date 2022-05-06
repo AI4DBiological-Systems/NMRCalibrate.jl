@@ -29,7 +29,9 @@ function setupβLSsolverMultistartoptim(optim_algorithm,
     p_ub = β_ub
 
     q, updateβfunc, updateκfunc, E_BLS, κ_BLS, b_BLS,
-    getβfunc = setupcostβLS(Es, As, LS_inds, U_rad_cost, y_cost;
+    getβfunc = setupcostβLS(Es, Bs, As, LS_inds, U_rad_cost, y_cost,
+        κs_β_DOFs,
+        κs_β_orderings;
         κ_lb_default = κ_lb_default,
         κ_ub_default = κ_ub_default)
 
@@ -52,20 +54,23 @@ function setupβLSsolverMultistartoptim(optim_algorithm,
 end
 
 function setupβLSsolver(optim_algorithm,
-    Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, SST}},
-    As::Vector{NMRSpectraSimulator.CompoundFIDType{T, SST}},
+    Es,
+    Bs,
+    As,
     LS_inds,
     U_rad_cost,
-    y_cost::Vector{Complex{T}};
+    y_cost::Vector{Complex{T}},
+    κs_β_DOFs::Vector{Vector{Int}},
+    κs_β_orderings::Vector{Vector{Vector{Int}}};
     κ_lb_default = 0.2,
     κ_ub_default = 5.0,
     max_iters = 50,
     xtol_rel = 1e-9,
     ftol_rel = 1e-9,
-    maxtime = Inf) where {T,SST}
+    maxtime = Inf) where T
 
-    #
-    N_β = sum( getNβ(As[n]) for n = 1:length(As) )
+    N_β = sum( getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
+
     β_lb = ones(T, N_β) .* (-π)
     β_ub = ones(T, N_β) .* (π)
     #β_initial = zeros(T, N_β)
@@ -74,10 +79,12 @@ function setupβLSsolver(optim_algorithm,
     p_ub = β_ub
 
     q, updateβfunc, updateκfunc, E_BLS, κ_BLS, b_BLS,
-    getβfunc = setupcostβLS(Es, As, LS_inds, U_rad_cost, y_cost;
+    getβfunc = setupcostβLS(Es, Bs, As, LS_inds, U_rad_cost, y_cost,
+    κs_β_DOFs, κs_β_orderings;
         κ_lb_default = κ_lb_default,
         κ_ub_default = κ_ub_default)
 
+    # q is simulated spectra. f is cost function.
     f = pp->costβLS(U_rad_cost, y_cost, updateβfunc, updateκfunc, pp, Es,
     E_BLS, κ_BLS, b_BLS, q)
 
@@ -99,65 +106,71 @@ function setupβLSsolver(optim_algorithm,
     return run_optim, f, E_BLS, κ_BLS, b_BLS, updateβfunc, q
 end
 
-"""
-setupcostcLshiftLS() for the β parameters.
-restriction of q to only the β and κ_BLS parameters.
-z version.
-"""
-function setupcostβLS(Gs::Vector{NMRSpectraSimulator.zCompoundFIDType{T, SST}},
-    As::Vector{NMRSpectraSimulator.CompoundFIDType{T, SST}},
-    LS_inds,
-    U0_rad,
-    y0::Vector{Complex{T}}) where {T <: Real, SST}
-
-    w = ones(T, length(Gs))
-
-    N_β = sum( getNβ(As[n]) for n = 1:length(As) )
-
-    st_ind_β = 1
-    fin_ind_β = st_ind_β + N_β - 1
-    updateβfunc = pp->updateβ!(As, pp, st_ind_β)
-
-    f = uu->NMRSpectraSimulator.evalitpproxymixture(uu, Gs; w = w)
-
-
-    ### LS κ.
-    U_rad_LS = U0_rad[LS_inds]
-
-    N_z, N_z_singlets = countz(Gs)
-    N_z_vars = N_z + N_z_singlets
-
-    E_LS, z_LS, b_LS = setupupdateLS(length(U_rad_LS), N_z_vars, y0[LS_inds])
-    z_LS = Vector{Complex{T}}(undef, length(z_LS))
-
-    updatezfunc = xx->updatez!(E_LS, b_LS, z_LS, U_rad_LS, Gs, w)
-
-    #### extract parameters from p.
-    getβfunc = pp->pp[st_ind_β:fin_ind_β]
-
-    return f, updateβfunc, updatezfunc, E_LS, z_LS, b_LS, getβfunc
-end
+# """
+# setupcostcLshiftLS() for the β parameters.
+# restriction of q to only the β and κ_BLS parameters.
+# z version.
+# """
+# function setupcostβLS(Gs::Vector{NMRSpectraSimulator.zCompoundFIDType{T, SST}},
+#     As::Vector{NMRSpectraSimulator.CompoundFIDType{T, SST}},
+#     LS_inds,
+#     U0_rad,
+#     y0::Vector{Complex{T}}) where {T <: Real, SST}
+#
+#     w = ones(T, length(Gs))
+#
+#     N_β = sum( getNβ(As[n]) for n = 1:length(As) )
+#
+#     st_ind_β = 1
+#     fin_ind_β = st_ind_β + N_β - 1
+#     updateβfunc = pp->updateβ!(As, pp, st_ind_β)
+#
+#     f = uu->NMRSpectraSimulator.evalitpproxymixture(uu, Gs; w = w)
+#
+#
+#     ### LS κ.
+#     U_rad_LS = U0_rad[LS_inds]
+#
+#     N_z, N_z_singlets = countz(Gs)
+#     N_z_vars = N_z + N_z_singlets
+#
+#     E_LS, z_LS, b_LS = setupupdateLS(length(U_rad_LS), N_z_vars, y0[LS_inds])
+#     z_LS = Vector{Complex{T}}(undef, length(z_LS))
+#
+#     updatezfunc = xx->updatez!(E_LS, b_LS, z_LS, U_rad_LS, Gs, w)
+#
+#     #### extract parameters from p.
+#     getβfunc = pp->pp[st_ind_β:fin_ind_β]
+#
+#     return f, updateβfunc, updatezfunc, E_LS, z_LS, b_LS, getβfunc
+# end
 
 """
 κ version.
 """
-function setupcostβLS(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, SST}},
-    As::Vector{NMRSpectraSimulator.CompoundFIDType{T, SST}},
+function setupcostβLS(Es::Vector{NMRSpectraSimulator.καFIDModelType{T, SST}},
+    Bs,
+    As,
     LS_inds,
     U0_rad,
-    y0::Vector{Complex{T}};
+    y0::Vector{Complex{T}},
+    κs_β_DOFs,
+    κs_β_orderings;
     κ_lb_default = 0.2,
     κ_ub_default = 5.0) where {T <: Real, SST}
 
     w = ones(T, length(Es))
 
-    N_β = sum( getNβ(As[n]) for n = 1:length(As) )
+    N_β = sum( getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
+
 
     st_ind_β = 1
     fin_ind_β = st_ind_β + N_β - 1
-    updateβfunc = pp->updateβ!(As, pp, st_ind_β)
+    updateβfunc = pp->updateβ!(Bs, κs_β_orderings, κs_β_DOFs, pp, st_ind_β)
 
-    f = uu->NMRSpectraSimulator.evalitpproxymixture(uu, Es; w = w)
+
+    f = uu->NMRSpectraSimulator.evalitpproxymixture(uu, Bs, Es; w = w)
+
     ### LS κ.
     U_rad_LS = U0_rad[LS_inds]
 
@@ -168,8 +181,8 @@ function setupcostβLS(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, SST}}
     κ_lb = ones(N_κ_vars) .* κ_lb_default
     κ_ub = ones(N_κ_vars) .* κ_ub_default
 
-    updateκfunc = xx->updateκ!(E_BLS, b_BLS, κ_BLS,
-    U_rad_LS, Es, w, κ_lb, κ_ub)
+    updateκfunc = xx->updateκ2!(E_BLS, b_BLS, κ_BLS,
+    U_rad_LS, Es, As, w, κ_lb, κ_ub)
 
     #### extract parameters from p.
     getβfunc = pp->pp[st_ind_β:fin_ind_β]

@@ -1,16 +1,46 @@
 """
 region_min_dist is the minimum horizontal distance between regions, in ppm.
 """
-function prepareoptim(cs_config_path,
+function prepareoptim(config_path::String,
     molecule_names,
     hz2ppmfunc,
     U_cost0, y_cost0::Vector{Complex{T}},
     As;
     region_min_dist = 0.1) where T <: Real
 
-    cs_delta_group = NMRSpecifyRegions.extractinfofromconfig( cs_config_path, molecule_names)
-    Δsys_cs = NMRSpecifyRegions.condenseΔcsconfig(cs_delta_group)
+    ## parse from config file.
+    config_dict = Dict()
+    if ispath(config_path)
 
+        # TODO add error-handling if name is not found in the dictionary or filename does not exist.
+        config_dict = JSON.parsefile(config_path)
+    end
+
+    N_compounds = length(molecule_names)
+
+    λ_lbs = Vector{Vector{T}}(undef, N_compounds)
+    λ_ubs = Vector{Vector{T}}(undef, N_compounds)
+    Δsys_cs = Vector{Vector{T}}(undef, N_compounds)
+    κs_β_orderings = Vector{Vector{Vector{Int}}}(undef, N_compounds)
+    κs_β_DOFs = Vector{Vector{Int}}(undef, N_compounds)
+
+    for n = 1:N_compounds
+
+        dict = config_dict[molecule_names[n]] # TODO graceful error-handle.
+
+        λ_lbs[n] = convert(Vector{T}, dict["λ_lb"])
+        λ_ubs[n] = convert(Vector{T}, dict["λ_ub"])
+        Δsys_cs[n] = convert(Vector{T}, dict["maximum chemical shift"])
+        κs_β_orderings[n] = convert(Vector{Vector{Int}}, dict["κs_β ordering"])
+        κs_β_DOFs[n] = convert(Vector{Int}, dict["κs_β degrees of freedom"])
+
+    end
+
+
+    # cs_delta_group = NMRSpecifyRegions.extractinfofromconfig( cs_config_path, molecule_names)
+    # Δsys_cs = NMRSpecifyRegions.condenseΔcsconfig(cs_delta_group)
+
+    ## get regions.
     ΩS0 = NMRSpectraSimulator.getΩS(As)
     ΩS0_ppm = NMRSpectraSimulator.getPs(ΩS0, hz2ppmfunc)
 
@@ -24,7 +54,11 @@ function prepareoptim(cs_config_path,
     P_cost = P_cost0[cost_inds]
     y_cost = y_cost0[cost_inds]
 
-    return Δsys_cs, y_cost, U_cost, P_cost, exp_info, cost_inds, cost_inds_set
+    return Δsys_cs, y_cost, U_cost, P_cost, exp_info, cost_inds, cost_inds_set,
+    λ_lbs,
+    λ_ubs,
+    κs_β_orderings,
+    κs_β_DOFs
 end
 
 """
@@ -171,7 +205,7 @@ function fitβLSκ(U_rad_cost,
 
     opt = NLopt.Opt(optim_algorithm, length(β_initial)) # global evolutionary.
 println(β_initial)
-    minf, minx, ret, numevals = NMRCalibrate.runNLopt!(  opt,
+    minf, minx, ret, numevals = runNLopt!(  opt,
         β_initial,
         obj_func,
         grad_func,

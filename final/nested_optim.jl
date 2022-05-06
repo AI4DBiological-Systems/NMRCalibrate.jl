@@ -52,7 +52,7 @@ ppm2hzfunc = pp->(ν_0ppm + pp*fs/SW)
 P_y = hz2ppmfunc.(U_y)
 
 
-ΩS_ppm = NMRCalibrate.findfreqrange(As, hz2ppmfunc)
+ΩS_ppm = NMRSpectraSimulator.getPsnospininfo(As, hz2ppmfunc)
 ΩS_ppm_sorted = sort(NMRSpectraSimulator.combinevectors(ΩS_ppm))
 u_offset = 0.5
 u_min = ppm2hzfunc(ΩS_ppm_sorted[1] - u_offset)

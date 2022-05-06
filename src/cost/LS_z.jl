@@ -1,3 +1,66 @@
+#### z parsing.
+
+function countz(Gs::Vector{NMRSpectraSimulator.zFIDModelType{T,SST}}) where {T,SST}
+
+    N_z = 0
+    N_z_singlets = 0
+    for n = 1:length(Gs)
+        # for i = 1:length(Gs[n].zs)
+        #     #for l = 1:length(Gs[n].zs[i])
+        #     N_z += length(Gs[n].zs[i])
+        #
+        #     #end
+        # end
+        N_z += sum(length.(Gs[n].zs))
+
+        N_z_singlets += length(Gs[n].zs_singlets)
+    end
+
+    return N_z, N_z_singlets
+end
+
+function parsez!(Gs::Vector{NMRSpectraSimulator.zFIDModelType{T,SST}},
+    z_vec::Vector{Complex{T}}) where {T,SST}
+
+    @assert length(z_vec) == sum(countz(Gs))
+
+    j = 0
+    for n = 1:length(Gs)
+        for i = 1:length(Gs[n].zs)
+            for l = 1:length(Gs[n].zs[i])
+                j += 1
+                Gs[n].zs[i][l] = z_vec[j]
+            end
+        end
+
+        for i = 1:length(Gs[n].zs_singlets)
+            j += 1
+            Gs[n].zs_singlets[i] = z_vec[j]
+        end
+    end
+
+    return j
+end
+
+function resetz!(Gs::Vector{NMRSpectraSimulator.zFIDModelType{T,SST}}) where {T,SST}
+
+    j = 0
+    for n = 1:length(Gs)
+        for i = 1:length(Gs[n].zs)
+            for l = 1:length(Gs[n].zs[i])
+                j += 1
+                Gs[n].zs[i][l] = one(T)
+            end
+        end
+
+        for i = 1:length(Gs[n].zs_singlets)
+            j += 1
+            Gs[n].zs_singlets[i] = one(T)
+        end
+    end
+
+    return j
+end
 
 
 ######### z, compensation for α at the (i,k) level. (spin system index, partition element index).
@@ -8,7 +71,7 @@ function updatez!(  A::Matrix{Complex{T}},
     b::Vector{T},
     z::Vector{Complex{T}},
     U_rad_LS,
-    Gs::Vector{NMRSpectraSimulator.zCompoundFIDType{T,SST}},
+    Gs::Vector{NMRSpectraSimulator.zFIDModelType{T,SST}},
     w::Vector{T}) where {T <: Real,SST}
 
     #@assert size(A) == (length(b), length(αS))
@@ -24,7 +87,7 @@ end
 
 function evaldesignmatrixz!(B::Matrix{Complex{T}},
     U_rad,
-    Es::Vector{NMRSpectraSimulator.zCompoundFIDType{T,NMRSpectraSimulator.SpinSysFIDType1{T}}},
+    Es::Vector{NMRSpectraSimulator.zFIDModelType{T,NMRSpectraSimulator.SpinSysParamsType1{T}}},
     w::Vector{T}) where T <: Real
 
     #

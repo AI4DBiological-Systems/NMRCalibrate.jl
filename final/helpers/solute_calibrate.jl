@@ -151,7 +151,7 @@ function calibratesolute(project_name, molecule_names, w;
 
 
 
-    ΩS_ppm = NMRCalibrate.findfreqrange(As, hz2ppmfunc)
+    ΩS_ppm = NMRSpectraSimulator.getPsnospininfo(As, hz2ppmfunc)
     ΩS_ppm_sorted = sort(NMRSpectraSimulator.combinevectors(ΩS_ppm))
 
     println("$(project_name): Partition sizes:")
