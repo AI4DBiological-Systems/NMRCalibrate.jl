@@ -47,6 +47,8 @@ include("../src/cost/nested.jl")
 
 include("../src/warp/warp_helpers.jl")
 
+include("../src/align/align_frontend.jl")
+
 export getwraparoundDFTfreqs
 
 end

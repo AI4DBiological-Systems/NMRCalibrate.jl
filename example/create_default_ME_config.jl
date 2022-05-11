@@ -7,7 +7,7 @@ import JSON3
 import Destruct
 
 output_folder = "/home/roy/Documents/repo/NMRData/input/fit_configs"
-mkpath(output_folder)
+isdir(output_folder) || mkpath(output_folder)
 save_path = joinpath(output_folder, "calibrate_700MHz_type1_select_compounds_default.json")
 
 # get mapping from molecule names to their spin system info json files.

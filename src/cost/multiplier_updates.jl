@@ -62,3 +62,24 @@ function resetκ!(Es::Vector{NMRSpectraSimulator.καFIDModelType{T,SST}}) where
 
     return j
 end
+
+function setκ!(Es::Vector{NMRSpectraSimulator.καFIDModelType{T,SST}},
+    val::T) where {T,SST}
+
+    j = 0
+    for n = 1:length(Es)
+        for i = 1:length(Es[n].κs_α)
+            for l = 1:length(Es[n].κs_α[i])
+                j += 1
+                Es[n].κs_α[i][l] = val
+            end
+        end
+
+        for i = 1:length(Es[n].κs_α_singlets)
+            j += 1
+            Es[n].κs_α_singlets[i] = val
+        end
+    end
+
+    return j
+end
