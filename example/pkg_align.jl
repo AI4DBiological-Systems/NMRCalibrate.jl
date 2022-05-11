@@ -72,6 +72,7 @@ dummy = 1
 
 #### visualize.
 U = LinRange(u_min, u_max, 50000)
+U = U_y
 P = hz2ppmfunc.(U)
 U_rad = U .* (2*π)
 

@@ -34,12 +34,33 @@ H_params_path = "/home/roy/Documents/repo/NMRData/input/coupling_info"
 dict_compound_to_filename = JSON.parsefile("/home/roy/Documents/repo/NMRData/input/compound_mapping/select_compounds.json")
 
 # specify the NMR experiment folder
-experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/NRC/misc/glucose/Sep-25-2018"
+# experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/NRC/misc/glucose/Sep-25-2018"
+# project_name = "NRC-glucose-2018" # specify where the calibration results should be saved for this experiment.
+# project_base_folder = "/home/roy/MEGAsync/outputs/NMR/calibrate/NRC"
 
-# specify where the calibration results should be saved for this experiment.
-project_name = "NRC-glucose-2018"
+# specify the NMR experiment folder
+# experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/similar_settings/BMRB-700-20mM/L-Serine"
+# project_name = "L-Serine" # specify where the calibration results should be saved for this experiment.
+# project_base_folder = "/home/roy/MEGAsync/outputs/NMR/calibrate/BMRB-700-20mM"
 
-project_base_folder = "/home/roy/MEGAsync/outputs/NMR/calibrate/NRC"
+
+experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/similar_settings/BMRB-500-2mM/L-Serine"
+project_name = "L-Serine" # specify where the calibration results should be saved for this experiment.
+project_base_folder = "/home/roy/MEGAsync/outputs/NMR/calibrate/BMRB-500-2mM"
+
+Jan 2022. 4 metabolites + glucose + DSS. paper.
+
+markdown tutorial math for the (n,i,k,l) from NMRSpectraSimulator.jl. poster.
+Ethanol. 5.
+
+glucose: done (NRC 600 MHz from 2018). poseter.
+L-Serine. debug. poster.
+L-glutamine. WIP.? .
+L-isoleucine. WIP. 9.
+L-leucine. WIP. 90.
+
+
+
 project_folder = joinpath(project_base_folder, project_name)
 isdir(project_folder) || mkpath(project_folder)
 
