@@ -4,7 +4,7 @@ Content taken from `prep_full.jl` and `align_pkg.jl` in the `/example` folder.
 Load experiment data, set up surrogate, and get fit positions in the frequency domain.
 
 ```julia
-i# combination of prep_save.jl and align_prep.jl.
+# combination of prep_save.jl and align_prep.jl.
 # Loads from NMR experiment instead of intermediate BSON file.
 
 import NMRDataSetup

@@ -667,37 +667,21 @@ div.title {text-align: center;}
 <span class='hljl-n'>i</span><span class='hljl-cs'># combination of prep_save.jl and align_prep.jl.</span><span class='hljl-t'>
 </span><span class='hljl-cs'># Loads from NMR experiment instead of intermediate BSON file.</span><span class='hljl-t'>
 
-</span><span class='hljl-k'>import</span><span class='hljl-t'> </span><span class='hljl-n'>NMRDataSetup</span><span class='hljl-t'>
-</span><span class='hljl-k'>import</span><span class='hljl-t'> </span><span class='hljl-n'>NMRSpectraSimulator</span><span class='hljl-t'>
-</span><span class='hljl-k'>import</span><span class='hljl-t'> </span><span class='hljl-n'>NMRSpecifyRegions</span><span class='hljl-t'>
 
-</span><span class='hljl-k'>import</span><span class='hljl-t'> </span><span class='hljl-n'>NMRCalibrate</span><span class='hljl-t'>
 
-</span><span class='hljl-k'>using</span><span class='hljl-t'> </span><span class='hljl-n'>LinearAlgebra</span><span class='hljl-t'>
-</span><span class='hljl-k'>using</span><span class='hljl-t'> </span><span class='hljl-n'>FFTW</span><span class='hljl-t'>
-
-</span><span class='hljl-cs'>#import PyPlot</span><span class='hljl-t'>
-</span><span class='hljl-k'>import</span><span class='hljl-t'> </span><span class='hljl-n'>PlotlyJS</span><span class='hljl-t'>
-</span><span class='hljl-k'>using</span><span class='hljl-t'> </span><span class='hljl-n'>Plots</span><span class='hljl-p'>;</span><span class='hljl-t'> </span><span class='hljl-nf'>plotly</span><span class='hljl-p'>()</span><span class='hljl-t'>
-
-</span><span class='hljl-k'>import</span><span class='hljl-t'> </span><span class='hljl-n'>BSON</span><span class='hljl-t'>
 </span><span class='hljl-k'>import</span><span class='hljl-t'> </span><span class='hljl-n'>JSON</span><span class='hljl-t'>
 
+</span><span class='hljl-k'>import</span><span class='hljl-t'> </span><span class='hljl-n'>BSON</span><span class='hljl-t'>
 </span><span class='hljl-k'>import</span><span class='hljl-t'> </span><span class='hljl-n'>NLopt</span><span class='hljl-t'>
 
 </span><span class='hljl-k'>import</span><span class='hljl-t'> </span><span class='hljl-n'>Statistics</span><span class='hljl-t'>
 </span><span class='hljl-k'>import</span><span class='hljl-t'> </span><span class='hljl-n'>Random</span><span class='hljl-t'>
 </span><span class='hljl-n'>Random</span><span class='hljl-oB'>.</span><span class='hljl-nf'>seed!</span><span class='hljl-p'>(</span><span class='hljl-ni'>25</span><span class='hljl-p'>)</span><span class='hljl-t'>
 
-</span><span class='hljl-cs'>##### global constants.</span><span class='hljl-t'>
-</span><span class='hljl-cs'>#cs_config_path = &quot;/home/roy/Documents/repo/NMRData/src/input/reduced_cs_config.txt&quot;</span><span class='hljl-t'>
-</span><span class='hljl-n'>SH_config_path</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-s'>&quot;/home/roy/Documents/repo/NMRData/input/SH_configs/select_compounds_SH_configs.json&quot;</span><span class='hljl-t'>
-</span><span class='hljl-n'>surrogate_config_path</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-s'>&quot;/home/roy/Documents/repo/NMRData/input/surrogate_configs/select_compounds_SH_configs.json&quot;</span><span class='hljl-t'>
-</span><span class='hljl-n'>fit_config_path</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-s'>&quot;/home/roy/Documents/repo/NMRData/input/fit_configs/calibrate_700MHz_type1_select_compounds.json&quot;</span><span class='hljl-t'>
 
-</span><span class='hljl-cs'># get mapping from molecule names to their spin system info json files.</span><span class='hljl-t'>
-</span><span class='hljl-n'>H_params_path</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-s'>&quot;/home/roy/Documents/repo/NMRData/input/coupling_info&quot;</span><span class='hljl-t'>
-</span><span class='hljl-n'>dict_compound_to_filename</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-n'>JSON</span><span class='hljl-oB'>.</span><span class='hljl-nf'>parsefile</span><span class='hljl-p'>(</span><span class='hljl-s'>&quot;/home/roy/Documents/repo/NMRData/input/compound_mapping/select_compounds.json&quot;</span><span class='hljl-p'>);</span>
+
+
+</span><span class='hljl-n'>dict_compound_to_filename</span><span class='hljl-t'> </span><span class='hljl-oB'>=</span><span class='hljl-t'> </span><span class='hljl-n'>JSON</span><span class='hljl-oB'>.</span><span class='hljl-nf'>parsefile</span><span class='hljl-p'>(</span><span class='hljl-s'>&quot;test.json&quot;</span><span class='hljl-p'>)</span>
 </pre>
 
 
@@ -710,7 +694,7 @@ ERROR: UndefVarError: i not defined
         <HR/>
         <div class="footer">
           <p>
-            Published from <a href="align_full.jmd">align_full.jmd</a>
+            Published from <a href="debug.jmd">debug.jmd</a>
             using <a href="http://github.com/JunoLab/Weave.jl">Weave.jl</a> v0.10.10 on 2022-05-11.
           </p>
         </div>

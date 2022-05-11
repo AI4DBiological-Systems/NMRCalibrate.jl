@@ -5,8 +5,9 @@ import NMRDataSetup
 import NMRSpectraSimulator
 import NMRSpecifyRegions
 
-include("../src/NMRCalibrate.jl")
-import .NMRCalibrate
+#include("../src/NMRCalibrate.jl")
+#import .NMRCalibrate
+import NMRCalibrate
 
 using LinearAlgebra
 using FFTW
