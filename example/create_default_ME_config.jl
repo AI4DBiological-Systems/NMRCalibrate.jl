@@ -51,6 +51,11 @@ Creates ordering of length N from equivalent indices.
 When used for a spin system, N is the number of nuclei in the system.
 
 Returns the indices for the N nuclei, and the number of degrees of freedom.
+
+Example:
+import Destruct
+tmp = collect( createorderingfromeqinds(ME[i], A.N_spins_sys[i]) for i = 1:length(A.N_spins_sys) )
+κs_β_ordering, κs_β_DOF = Destruct.destruct(tmp)
 """
 function createorderingfromeqinds(eq_inds::Vector{Vector{Int}}, N::Int)
 

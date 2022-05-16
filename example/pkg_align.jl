@@ -12,7 +12,7 @@ Random.seed!(25)
 PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "serif"])
 
 
-save_flag = false
+save_flag = true
 
 
 N_d = sum( NMRCalibrate.getNd(Bs[n]) for n = 1:length(Bs) )
@@ -72,7 +72,6 @@ dummy = 1
 
 #### visualize.
 U = LinRange(u_min, u_max, 50000)
-U = U_y
 P = hz2ppmfunc.(U)
 U_rad = U .* (2*π)
 
