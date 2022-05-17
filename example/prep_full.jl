@@ -5,9 +5,9 @@ import NMRDataSetup
 import NMRSpectraSimulator
 import NMRSpecifyRegions
 
-#include("../src/NMRCalibrate.jl")
-#import .NMRCalibrate
-import NMRCalibrate
+include("../src/NMRCalibrate.jl")
+import .NMRCalibrate
+#import NMRCalibrate
 
 using LinearAlgebra
 using FFTW
@@ -34,8 +34,9 @@ H_params_path = "/home/roy/Documents/repo/NMRData/input/coupling_info"
 dict_compound_to_filename = JSON.parsefile("/home/roy/Documents/repo/NMRData/input/compound_mapping/select_compounds.json")
 
 # specify the NMR experiment folder
+experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/misc/bmse000297_ethanol/"
 #experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/NRC/misc/glucose/Sep-25-2018"
-experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/similar_settings/BMRB-700-20mM/L-Serine"
+#experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/similar_settings/BMRB-700-20mM/L-Serine"
 #experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/similar_settings/BMRB-500-0.5mM/L-Serine"
 #experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/NRC/NRC_4_amino_acid_mixture_Jan_2022/1"
 #experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/similar_settings/BMRB-700-20mM/L-Isoleucine"
@@ -47,18 +48,20 @@ experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/s
 
 
 # specify where the calibration results should be saved for this experiment.
+project_name = "ethanol"
 #project_name = "NRC-glucose-2018"
-project_name = "Serine-BMRB-700-20mM"
+#project_name = "Serine-BMRB-700-20mM"
 #project_name = "Serine-BMRB-500-0.5mM"
 #project_name = "Serine-glucose-NRC-Jan2022"
 #project_name = "Isoleucine-BMRB-700-20mM"
 #project_name = "Glutamine-BMRB-700-20mM"
-#project_name = "Leucine-BMRB-500-0.5mM"
-#project_name = "bmse000795_2_DSS"
+#project_name = "Leucine-BMRB-500-0.5mM" # skipped.
+#project_name = "bmse000795_2_DSS" # skipped.
 #project_name = "gissmo_DSS"
 
+molecule_names = ["Ethanol";]
 #molecule_names = ["D-(+)-Glucose";]
-molecule_names = ["L-Serine";]
+#molecule_names = ["L-Serine";]
 #molecule_names = ["L-Serine";]
 #molecule_names = ["L-Serine"; "D-(+)-Glucose";]
 #molecule_names = ["L-Isoleucine";]
@@ -67,7 +70,7 @@ molecule_names = ["L-Serine";]
 #molecule_names = ["DSS";]
 #molecule_names = ["DSS";]
 
-project_base_folder = "/home/roy/MEGAsync/outputs/NMR/calibrate/NRC"
+project_base_folder = "/home/roy/MEGAsync/outputs/NMR/calibrate/align/"
 project_folder = joinpath(project_base_folder, project_name)
 isdir(project_folder) || mkpath(project_folder)
 
@@ -182,4 +185,4 @@ a_setp, b_setp, minxs,
 
 
 
-#include("pkg_align.jl")
+include("pkg_align.jl")

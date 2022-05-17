@@ -1,4 +1,4 @@
-module NMRCalibrate
+module NMRCalibrate # https://github.com/AI4DBiological-Systems/NMRCalibrate.jl
 
 #import JLD
 

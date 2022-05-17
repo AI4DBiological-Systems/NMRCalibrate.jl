@@ -6,7 +6,6 @@ version = "0.1.0"
 [deps]
 BSON = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
 BoundedLeastSquares = "95df6a61-002c-412f-b798-c25124fa4bbf"
-GISSMOReader = "fab8f492-3bcc-4cb4-9708-3e824b5a8279"
 Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
 JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
