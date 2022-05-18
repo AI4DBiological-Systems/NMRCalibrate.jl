@@ -209,6 +209,30 @@ function updateβ!(Bs::Vector{NMRSpectraSimulator.FIDModelType{T,SST}},
     return j
 end
 
+function updateβ!(Bs::Vector{NMRSpectraSimulator.FIDModelType{T,SST}},
+    p::Vector{T},
+    st_ind::Int)::Int where {T <: Real, SST}
+
+    j = st_ind - 1
+
+    for n = 1:length(Bs)
+        for i = 1:length(Bs[n].ss_params.κs_β)
+            for l = 1:length(Bs[n].ss_params.κs_β[i])
+
+                j += 1
+                Bs[n].ss_params.κs_β[i][l] = p[j]
+            end
+        end
+
+        for i = 1:length(Bs[n].β_singlets)
+            j += 1
+            Bs[n].β_singlets[i] = p[j]
+        end
+    end
+
+    return j
+end
+
 function getNβ(A::NMRSpectraSimulator.FIDModelType{T,SST}) where {T,SST}
 
     counter_sys = 0

@@ -41,7 +41,7 @@ println("Timing:")
     fs,
     SW,
     Δsys_cs,
-    a_setp, b_setp, κs_β_DOFs, κs_β_orderings,
+    a_setp, b_setp, #κs_β_DOFs, κs_β_orderings,
     shift_lb,
     shift_ub,
     cost_inds_set;
@@ -49,7 +49,8 @@ println("Timing:")
     w = w,
     N_starts = 100,
     local_optim_algorithm = NLopt.LN_BOBYQA,
-    xtol_rel = 1e-3,
+    #xtol_rel = 1e-3,
+    xtol_rel = 1e-9,
     maxeval = 50,
     maxtime = Inf,
     β_optim_algorithm = :GN_DIRECT_L,
@@ -75,7 +76,8 @@ function plotalignmentresults(As, Es, w, save_folder,
     P_y, y,
     region_min_dist,
     obj_funcs, minfs, minxs, rets,
-    display_reduction_factor, display_threshold_factor;
+    display_reduction_factor, display_threshold_factor,
+    cost_inds_set, loop_range;
     canvas_size = (1000, 400),
     display_flag = false,
     save_plot_flag = true,
@@ -86,6 +88,9 @@ function plotalignmentresults(As, Es, w, save_folder,
     U_rad = U .* (2*π)
 
     for r in loop_range
+
+        y_cost = y[cost_inds_set[r]]
+        P_cost = P_y[cost_inds_set[r]]
 
         q2 = uu->NMRSpectraSimulator.evalitpproxymixture(uu, As, Es; w = w)
 
@@ -101,7 +106,7 @@ function plotalignmentresults(As, Es, w, save_folder,
         # plot.
         isdir(save_folder) || mkpath(save_folder)
 
-        plots_save_path = joinpath(save_folder, "results_real.html")
+        plots_save_path = joinpath(save_folder, "results_real_$(r).html")
         title_string = "$(project_name) alignment results, region $(r), real part"
 
         plot_obj = Plots.plot( P_display,
@@ -118,11 +123,16 @@ function plotalignmentresults(As, Es, w, save_folder,
             xflip = true,
             size = canvas_size)
 
-        Plots.plot!(plot_obj, P_y, real.(y), label = "data",
+        Plots.plot!(plot_obj, P_y, real.(y), label = "full data",
             seriestype = :line,
             linestyle = :dot,
             xflip = true,
             linewidth = 4)
+
+        Plots.plot!(plot_obj, P_cost, real.(y_cost), label = "fit data",
+            markershape = :circle,
+            seriestype = :scatter,
+            xflip = true)
 
 
         Plots.savefig(plot_obj, plots_save_path)
@@ -138,8 +148,14 @@ end
 
 
 #### visualize.
+# minxs[1][1] = 0.000
+# minxs[2][1] = 0.000
 display_reduction_factor = 100
 display_threshold_factor = 0.05/10
+if "L-Isoleucine" in molecule_names
+    display_reduction_factor = 1
+    display_threshold_factor = 0.001/10
+end
 save_plot_flag = true
 display_flag = true
 
@@ -147,10 +163,11 @@ plotalignmentresults(As, Es, w, project_folder,
     P_y, y,
     region_min_dist,
     obj_funcs, minfs, minxs, rets,
-    display_reduction_factor, display_threshold_factor;
+    display_reduction_factor, display_threshold_factor,
+    cost_inds_set, loop_range;
     canvas_size = (1000, 400),
-    display_flag = true,
-    save_plot_flag = true,
+    display_flag = display_flag,
+    save_plot_flag = save_plot_flag,
     N_viz = 50000)
 
 for r in loop_range

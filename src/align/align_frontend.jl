@@ -9,7 +9,7 @@ function alignregion(y_cost::Vector{Complex{T}},
     fs,
     SW,
     Δsys_cs,
-    a_setp, b_setp, κs_β_DOFs, κs_β_orderings,
+    a_setp, b_setp, #κs_β_DOFs, κs_β_orderings,
     shift_lb::Vector{T},
     shift_ub::Vector{T};
     w = ones(T, length(As)),
@@ -37,7 +37,7 @@ function alignregion(y_cost::Vector{Complex{T}},
     q, updatedfunc, getshiftfunc, N_vars_set,
     run_optim, obj_func_β, E_BLS, κ_BLS, b_BLS, updateβfunc,
     q_β = setupcostnesteddwarp(Es, Bs, As, fs, SW, LS_inds, U_rad_cost,
-        y_cost, Δsys_cs, a_setp, b_setp, κs_β_DOFs, κs_β_orderings;
+        y_cost, Δsys_cs, a_setp, b_setp; #κs_β_DOFs, κs_β_orderings;
         w = w,
         optim_algorithm = β_optim_algorithm,
         κ_lb_default = κ_lb_default,
@@ -48,11 +48,13 @@ function alignregion(y_cost::Vector{Complex{T}},
         maxtime = β_maxtime)
 
     # set up outer optim over shifts.
-    N_β = sum( getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
+    #N_β = sum( getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
+    N_β = sum( getNβ(Bs[n]) for n = 1:length(Bs) )
     p_β = zeros(T, N_β) # persistant buffer.
 
     obj_func = pp->costnestedd(U_rad_cost, y_cost, updatedfunc, pp,
-    Es, Bs, κs_β_orderings, κs_β_DOFs, q, run_optim, E_BLS, κ_BLS, b_BLS, p_β)
+    #Es, Bs, κs_β_orderings, κs_β_DOFs, q, run_optim, E_BLS, κ_BLS, b_BLS, p_β)
+    Es, Bs, run_optim, E_BLS, κ_BLS, b_BLS, p_β)
 
     # optim.
     prob = MultistartOptimization.MinimizationProblem(obj_func, shift_lb, shift_ub)
@@ -81,7 +83,7 @@ end
 Requires user to supply a surrogate.
 """
 function aligncompound(y::Vector{Complex{T}}, U_y, P_y, As, Bs, Es, fs, SW,
-    Δsys_cs, a_setp, b_setp, κs_β_DOFs, κs_β_orderings::Vector{Vector{Vector{Int}}},
+    Δsys_cs, a_setp, b_setp, #κs_β_DOFs, κs_β_orderings::Vector{Vector{Vector{Int}}},
     shift_lb::Vector{T},
     shift_ub::Vector{T},
     cost_inds_set::Vector{Vector{Int}};
@@ -117,7 +119,7 @@ function aligncompound(y::Vector{Complex{T}}, U_y, P_y, As, Bs, Es, fs, SW,
             fs,
             SW,
             Δsys_cs,
-            a_setp, b_setp, κs_β_DOFs, κs_β_orderings,
+            a_setp, b_setp, #κs_β_DOFs, κs_β_orderings,
             shift_lb,
             shift_ub;
             w = w,
@@ -234,7 +236,8 @@ function alignproject(save_path::String,
 
     ### align.
     N_d = sum( getNd(Bs[n]) for n = 1:length(Bs) )
-    N_β = sum( getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
+    #N_β = sum( getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
+    N_β = sum( getNβ(Bs[n]) for n = 1:length(Bs) )
 
     shift_lb = -ones(T, N_d)
     shift_ub = ones(T, N_d)
@@ -255,7 +258,7 @@ function alignproject(save_path::String,
         fs,
         SW,
         Δsys_cs,
-        a_setp, b_setp, κs_β_DOFs, κs_β_orderings,
+        a_setp, b_setp, #κs_β_DOFs, κs_β_orderings,
         shift_lb,
         shift_ub,
         cost_inds_set;
