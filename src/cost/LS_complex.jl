@@ -99,6 +99,7 @@ function evaldesignmatrixw2!(B::Matrix{Complex{T}},
 
     for n = 1:N
         E = Es[n]
+        A = As[n]
 
         for m = 1:M
 
