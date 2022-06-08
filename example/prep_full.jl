@@ -54,7 +54,10 @@ experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/NRC/NR
 #project_name = "NRC-glucose-2018-2" #project_name = "NRC-glucose-2018"
 #project_name = "Serine-BMRB-700-20mM"
 #project_name = "Serine-BMRB-500-0.5mM - 2" #project_name = "Serine-BMRB-500-0.5mM"
-project_name = "Serine-glucose-NRC-Jan2022"
+
+# project_name = "Serine-glucose-NRC-Jan2022"
+project_name = "NRC-Jan2022-serine-glucose-dss"
+
 #project_name = "Isoleucine-BMRB-700-20mM"
 #project_name = "Glutamine-BMRB-700-20mM"
 #project_name = "Leucine-BMRB-500-0.5mM" # skipped.
@@ -72,7 +75,10 @@ project_name = "Serine-glucose-NRC-Jan2022"
 
 #molecule_names = ["L-Serine - 2000 study"; "D-Glucose - 2000 study";]
 #molecule_names = ["L-Serine"; "D-(+)-Glucose"; "DSS"] # for debugging code with singlets.
-molecule_names = ["L-Serine"; "D-(+)-Glucose"]
+#molecule_names = ["L-Serine"; "D-(+)-Glucose"; "L-Glutamine"; "L-Isoleucine"; "L-Leucine"; "DSS"]
+
+#molecule_names = ["L-Serine"; "D-(+)-Glucose"; "L-Leucine"; ]
+molecule_names = ["L-Serine"; "D-(+)-Glucose"; "DSS"; ] # really need plots that highlights regions and compounds.
 
 #molecule_names = ["L-Isoleucine";]
 #molecule_names = ["L-Glutamine";]
@@ -204,10 +210,15 @@ a_setp, b_setp, minxs,
 #include("phenylalanine.jl")
 
 #include("pkg_calibrate.jl")
-#include("pkg_quantify.jl")
+include("pkg_quantify.jl")
 
 
 using Plots; plotly()
+
+# save data plot.
+file_name = "data.html"
+plots_save_path = joinpath(project_folder, file_name)
+
 
 canvas_size = (1000, 400)
 plot_obj = Plots.plot( P_y,
