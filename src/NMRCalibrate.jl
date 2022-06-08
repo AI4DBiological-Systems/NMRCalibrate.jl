@@ -35,6 +35,7 @@ include("../src/cost/LS_complex.jl")
 #include("../src/cost/LS_z.jl")
 
 include("../src/cost/beta_kappa.jl")
+include("../src/cost/beta_w.jl")
 include("../src/cost/shift.jl")
 
 include("../src/cost/updates.jl")
@@ -47,7 +48,8 @@ include("../src/cost/nested.jl")
 
 include("../src/warp/warp_helpers.jl")
 
-include("../src/align/align_frontend.jl")
+include("../src/align/align_calibration_frontend.jl")
+include("../src/align/align_quantification_frontend.jl")
 
 export getwraparoundDFTfreqs
 

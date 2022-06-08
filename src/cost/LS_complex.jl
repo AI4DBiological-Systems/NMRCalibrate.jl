@@ -37,23 +37,30 @@ end
 
 """
 A is an M x L complex-valued matrix, b is 2*M 1D array.
+Updates solution to w (mutates it), and mutates intermediate variables A, b.
 """
 function updatew!(  A::Matrix{Complex{T}},
     b,
     w::Vector{T},
     U_rad_LS,
-    Es::Vector{NMRSpectraSimulator.FIDModelType{T,SST}},
+    Es,
+    As,
     w_lower::Vector{T},
-    w_upper::Vector{T}) where {T <: Real, SST}
+    w_upper::Vector{T}) where T <: Real
 
     @assert length(b) == 2*length(U_rad_LS)
 
-    evaldesignmatrixw!(A, U_rad_LS, Es)
+    evaldesignmatrixw2!(A, U_rad_LS, Es, As)
+
+    # ## check.
+    # A2 = copy(A)
+    # evaldesignmatrixw!(A, U_rad_LS, Es, As)
+    #
+    # if norm(A-A2) > 1e-10
+    #     println("problem)")
+    # end
 
     ### LS solve.
-    # w[:] = NonNegLeastSquares.nonneg_lsq(A, b; alg = :fnnls)
-    # status_flag = true
-
     w[:], status_flag = solveBLScL(A, b, w_lower, w_upper)
 
     return status_flag
@@ -61,10 +68,8 @@ end
 
 
 function evaldesignmatrixw!(B::Matrix{Complex{T}},
-    U_rad,
-    Es::Vector{NMRSpectraSimulator.FIDModelType{T,SST}}) where {T <: Real, SST}
+    U_rad, Es, As) where T <: Real
 
-    #
     M = length(U_rad)
     N = length(Es)
 
@@ -75,12 +80,56 @@ function evaldesignmatrixw!(B::Matrix{Complex{T}},
     for n = 1:N
         for m = 1:M
             # speed up later.
-            B[m,n] = NMRSpectraSimulator.evalitpproxycompound(U_rad[m], Es[n])
+            B[m,n] = NMRSpectraSimulator.evalitpproxycompound(U_rad[m], As[n], Es[n])
         end
     end
 
     return nothing
 end
+
+function evaldesignmatrixw2!(B::Matrix{Complex{T}},
+    U_rad, Es, As) where T <: Real
+
+    M = length(U_rad)
+    N = length(Es)
+
+    @assert size(B) == (M,N)
+
+    fill!(B, NaN) # debug.
+
+    for n = 1:N
+        E = Es[n]
+
+        for m = 1:M
+
+            s = zero(Complex{T})
+            for i in eachindex(E.κs_α)
+                for k in eachindex(E.κs_α[i])
+                    s += E.core.qs[i][k](U_rad[m] - E.core.ss_params.d[i], E.core.ss_params.κs_λ[i])
+                end
+            end
+            B[m,n] = s
+
+            #B[m,n] = sum( sum( E.core.qs[i][k](U_rad[m] - E.core.ss_params.d[i], E.core.ss_params.κs_λ[i]) for k in eachindex(E.κs_α[i])) for i in eachindex(E.κs_α))
+
+            # singlets.
+            for k = 1:length(E.κs_α_singlets)
+
+                B[m,n] += NMRSpectraSimulator.evalsinglets(U_rad[m], E.core.d_singlets,
+                A.αs_singlets, A.Ωs_singlets,
+                E.core.β_singlets, E.core.λ0, E.core.κs_λ_singlets, E.κs_α_singlets)
+            end
+
+        end
+    end
+
+    # if !all(isfinite.(B))
+    #     println("problem")
+    # end
+
+    return nothing
+end
+
 
 ######### κ, compensation for α.
 

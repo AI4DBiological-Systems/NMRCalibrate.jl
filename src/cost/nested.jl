@@ -145,7 +145,7 @@ end
 
 
 
-##### only d.
+##### only d. calibrate.
 
 
 function setupcostnesteddwarp(Es,
@@ -159,8 +159,6 @@ function setupcostnesteddwarp(Es,
     Δsys_cs::Vector{Vector{T}},
     itp_a,
     itp_b;
-    #κs_β_DOFs,
-    #κs_β_orderings;
     w = ones(T, length(Es)),
     optim_algorithm = :GN_DIRECT_L,
     κ_lb_default = 0.2,
@@ -229,6 +227,90 @@ function costnestedd(U,
 
     # evaluate cost.
     cost = norm(reinterpret(T, E_BLS)*κ_BLS - b_BLS)^2
+
+    return cost
+end
+
+
+
+##### only d. quantify.
+
+function setupcostnesteddwarpw(Es,
+    Bs,
+    As,
+    fs::T,
+    SW::T,
+    LS_inds,
+    U_rad_cost,
+    y_cost::Vector{Complex{T}},
+    Δsys_cs::Vector{Vector{T}},
+    itp_a,
+    itp_b;
+    optim_algorithm = :GN_DIRECT_L,
+    w_lb_default = 0.2,
+    w_ub_default = 5.0,
+    max_iters = 500,
+    xtol_rel = 1e-9,
+    ftol_rel = 1e-9,
+    maxtime = Inf) where T <: Real
+
+
+    ##### update functions.
+    #N_β = sum( getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
+    N_d = sum( getNd(Bs[n]) for n = 1:length(Bs) )
+
+    st_ind_d = 1
+    fin_ind_d = st_ind_d + N_d - 1
+    updatedfunc = pp->updatemixturedwarp!(Bs, pp, st_ind_d, fs, SW,
+        Δsys_cs, itp_a, itp_b)
+
+    N_vars_set = [N_d; ]
+
+    # β, κ update.
+    run_optim, obj_func_β, E_BLS, w_BLS, b_BLS, updateβfunc,
+    q_β = setupβLSsolverw(optim_algorithm,
+        Es, Bs, As, LS_inds, U_rad_cost, y_cost;
+        w_lb_default = w_lb_default,
+        w_ub_default = w_ub_default,
+        max_iters = max_iters,
+        xtol_rel = xtol_rel,
+        ftol_rel = ftol_rel,
+        maxtime = maxtime)
+
+    #### extract parameters from p.
+    getshiftfunc = pp->pp[st_ind_d:fin_ind_d]
+
+    # model. (optional)
+    f = uu->NMRSpectraSimulator.evalitpproxymixture(uu, As, Es; w = w_BLS)
+
+    return f, updatedfunc, getshiftfunc, N_vars_set,
+    run_optim, obj_func_β, E_BLS, w_BLS, b_BLS, updateβfunc, q_β
+end
+
+##### cost.
+"""
+Note that NLopt handle exceptions gracefully. Check the termination status to see if an exception occurs (would return FORCED_STOP)
+"""
+function costnesteddw(U,
+    S_U::Vector{Complex{T}},
+    updatedfunc,
+    p::Vector{T}, Es, Bs, #κs_β_orderings, κs_β_DOFs, f,
+    run_optim_β_κ::Function,
+    E_BLS::Matrix{Complex{T}}, w_BLS::Vector{T}, b_BLS,
+    p_β::Vector{T})::T where T <: Real
+
+    updatedfunc(p)
+
+    ### minimize inner problem.
+    fill!(p_β, zero(T)) # always start from 0-phase?
+    minf, minx, ret, N_evals = run_optim_β_κ(p_β)
+    p_β[:] = minx # take out?
+
+    # ensure Es/As is updated with the latest β.
+    updateβ!(Bs, minx, 1)
+
+    # evaluate cost.
+    cost = norm(reinterpret(T, E_BLS)*w_BLS - b_BLS)^2
 
     return cost
 end

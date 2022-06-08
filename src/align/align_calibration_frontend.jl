@@ -1,4 +1,5 @@
 # based on the contents of align.jl
+# consider changing terminology from align to calibrate.
 
 function alignregion(y_cost::Vector{Complex{T}},
     U_cost,
@@ -139,6 +140,65 @@ function aligncompound(y::Vector{Complex{T}}, U_y, P_y, As, Bs, Es, fs, SW,
 
     return obj_funcs, minfs, minxs, rets
 end
+
+
+function aligncompoundsingleregion(y::Vector{Complex{T}}, U_y, P_y, As, Bs, Es, fs, SW,
+    Δsys_cs, a_setp, b_setp, #κs_β_DOFs, κs_β_orderings::Vector{Vector{Vector{Int}}},
+    shift_lb::Vector{T},
+    shift_ub::Vector{T},
+    cost_inds_set::Vector{Vector{Int}};
+    loop_range = 1:length(cost_inds_set),
+    w = ones(T, length(As)),
+    N_starts = 100,
+    local_optim_algorithm = NLopt.LN_BOBYQA,
+    xtol_rel = 1e-3,
+    maxeval = 50,
+    maxtime = Inf,
+    β_optim_algorithm = :GN_DIRECT_L,
+    κ_lb_default = 1e-2,
+    κ_ub_default = 1e2,
+    β_max_iters = 500,
+    β_xtol_rel = 1e-9,
+    β_ftol_rel = 1e-9,
+    β_maxtime = Inf) where T <: Real
+
+    tmp = collect( cost_inds_set[r] for r = 1:length(cost_inds_set) )
+    inds_redundant = NMRSpectraSimulator.combinevectors(tmp)
+    inds = inds_redundant[indexin( unique(inds_redundant), inds_redundant)]
+
+    U_cost = U_y[inds]
+    P_cost = P_y[inds]
+    y_cost = y[inds]
+
+    obj_func, minf, minx, ret = alignregion(y_cost,
+        U_cost,
+        P_cost,
+        As,
+        Bs,
+        Es,
+        fs,
+        SW,
+        Δsys_cs,
+        a_setp, b_setp, #κs_β_DOFs, κs_β_orderings,
+        shift_lb,
+        shift_ub;
+        w = w,
+        N_starts = 100,
+        local_optim_algorithm = NLopt.LN_BOBYQA,
+        xtol_rel = 1e-3,
+        maxeval = 50,
+        maxtime = Inf,
+        β_optim_algorithm = :GN_DIRECT_L,
+        κ_lb_default = 1e-2,
+        κ_ub_default = 1e2,
+        β_max_iters = 500,
+        β_xtol_rel = 1e-9,
+        β_ftol_rel = 1e-9,
+        β_maxtime = Inf)
+
+    return obj_func, minf, minx, ret, P_cost, y_cost
+end
+
 
 """
 Includes surrogate construction. Taken from prep_save.jl

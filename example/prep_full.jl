@@ -38,37 +38,51 @@ dict_compound_to_filename = JSON.parsefile("/home/roy/Documents/repo/NMRData/inp
 #experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/NRC/misc/glucose/Sep-25-2018"
 #experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/similar_settings/BMRB-700-20mM/L-Serine"
 #experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/similar_settings/BMRB-500-0.5mM/L-Serine"
-#experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/NRC/NRC_4_amino_acid_mixture_Jan_2022/1"
-experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/similar_settings/BMRB-700-20mM/L-Isoleucine"
+experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/NRC/NRC_4_amino_acid_mixture_Jan_2022/1"
+#experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/similar_settings/BMRB-700-20mM/L-Isoleucine"
 #experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/similar_settings/BMRB-700-20mM/L-Glutamine"
 #experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/similar_settings/BMRB-500-0.5mM/L-Leucine"
 #experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/misc/bmse000795_2_DSS"
 #experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/misc/gissmo_DSS"
+#experiment_full_path = "/home/roy/MEGAsync/outputs/NMR/experiments/misc/bmse000900_L-Phenylalanine"
 
-
+#experiment_full_path = "/home/roy/MEGAsync/outputs/NMR/experiments/misc/bmse000900_L-Phenylalanine"
+#experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/glucose-600-bmse000855_1"
 
 # specify where the calibration results should be saved for this experiment.
 #project_name = "ethanol"
-#project_name = "NRC-glucose-2018"
+#project_name = "NRC-glucose-2018-2" #project_name = "NRC-glucose-2018"
 #project_name = "Serine-BMRB-700-20mM"
-#project_name = "Serine-BMRB-500-0.5mM"
-#project_name = "Serine-glucose-NRC-Jan2022"
-project_name = "Isoleucine-BMRB-700-20mM"
+#project_name = "Serine-BMRB-500-0.5mM - 2" #project_name = "Serine-BMRB-500-0.5mM"
+project_name = "Serine-glucose-NRC-Jan2022"
+#project_name = "Isoleucine-BMRB-700-20mM"
 #project_name = "Glutamine-BMRB-700-20mM"
 #project_name = "Leucine-BMRB-500-0.5mM" # skipped.
 #project_name = "bmse000795_2_DSS" # skipped.
 #project_name = "gissmo_DSS"
+#project_name = "Phenylalanine-GISSMO-600-bmse000900"
+
+#project_name = "Phenylalanine-GISSMO-600-bmse000900-poster"
+#project_name = "glucose-600-bmse000855_1-poster"
 
 #molecule_names = ["Ethanol";]
-#molecule_names = ["D-(+)-Glucose";]
+#molecule_names = ["D-Glucose - 2000 study";] #molecule_names = ["D-(+)-Glucose";]
 #molecule_names = ["L-Serine";]
-#molecule_names = ["L-Serine";]
-#molecule_names = ["L-Serine"; "D-(+)-Glucose";]
-molecule_names = ["L-Isoleucine";]
+#molecule_names = ["L-Serine - 2000 study";] # molecule_names = ["L-Serine";]
+
+#molecule_names = ["L-Serine - 2000 study"; "D-Glucose - 2000 study";]
+#molecule_names = ["L-Serine"; "D-(+)-Glucose"; "DSS"] # for debugging code with singlets.
+molecule_names = ["L-Serine"; "D-(+)-Glucose"]
+
+#molecule_names = ["L-Isoleucine";]
 #molecule_names = ["L-Glutamine";]
 #molecule_names = ["L-Leucine";]
 #molecule_names = ["DSS";]
 #molecule_names = ["DSS";]
+#molecule_names = ["L-Phenylalanine";]
+
+#molecule_names = ["L-Phenylalanine";]
+#molecule_names = ["D-(+)-Glucose";]
 
 #molecule_names = ["L-Phenylalanine, 500 MHz"; "L-Phenylalanine"]
 
@@ -185,6 +199,43 @@ P_y = hz2ppmfunc.(U_y)
 a_setp, b_setp, minxs,
     rets = NMRCalibrate.setupitpab(0.1, 10, 0.7; optim_algorithm = :LN_BOBYQA)
 
+# for poster.
+#include("pkg_align_single_region.jl")
+#include("phenylalanine.jl")
+
+#include("pkg_calibrate.jl")
+#include("pkg_quantify.jl")
 
 
-include("pkg_align.jl")
+using Plots; plotly()
+
+canvas_size = (1000, 400)
+plot_obj = Plots.plot( P_y,
+    real.(y),
+    title = "data spectrum",
+    label = "data",
+    seriestype = :line,
+    ticks = :native,
+    xlims = (P_y[1],P_y[end]),
+    hover = P_y,
+    linewidth = 4,
+    xlabel = "ppm",
+    ylabel = "real part of spectrum",
+    xflip = true,
+    size = canvas_size)
+Plots.savefig(plot_obj, plots_save_path)
+
+# julia> minxs
+# 3-element Vector{Vector{Float64}}:
+#  [-0.3182551682670491, 0.049183131629439616, 0.024203062792075736]
+#  [0.9948724914072531, 0.06932430981123272, 0.0839330953494708]
+#  [0.060496655154809946, 0.10515911754875247, 0.11996321361619477]
+#
+# julia> w_BLS
+# ERROR: UndefVarError: w_BLS not defined
+#
+# julia> ws
+# 3-element Vector{Vector{Float64}}:
+#  [75.8591754032393, 0.21482769137077787]
+#  [47.263485918404186, 0.33989540682369757]
+#  [0.26376149754144756, 0.34040957238909]
