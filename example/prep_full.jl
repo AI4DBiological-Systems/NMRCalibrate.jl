@@ -35,10 +35,10 @@ dict_compound_to_filename = JSON.parsefile("/home/roy/Documents/repo/NMRData/inp
 
 # specify the NMR experiment folder
 #experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/misc/bmse000297_ethanol/"
-#experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/NRC/misc/glucose/Sep-25-2018"
+experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/NRC/misc/glucose/Sep-25-2018"
 #experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/similar_settings/BMRB-700-20mM/L-Serine"
 #experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/similar_settings/BMRB-500-0.5mM/L-Serine"
-experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/NRC/NRC_4_amino_acid_mixture_Jan_2022/1"
+#experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/NRC/NRC_4_amino_acid_mixture_Jan_2022/1"
 #experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/similar_settings/BMRB-700-20mM/L-Isoleucine"
 #experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/similar_settings/BMRB-700-20mM/L-Glutamine"
 #experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/similar_settings/BMRB-500-0.5mM/L-Leucine"
@@ -51,12 +51,12 @@ experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/NRC/NR
 
 # specify where the calibration results should be saved for this experiment.
 #project_name = "ethanol"
-#project_name = "NRC-glucose-2018-2" #project_name = "NRC-glucose-2018"
+project_name = "NRC-glucose-2018"
 #project_name = "Serine-BMRB-700-20mM"
 #project_name = "Serine-BMRB-500-0.5mM - 2" #project_name = "Serine-BMRB-500-0.5mM"
 
 # project_name = "Serine-glucose-NRC-Jan2022"
-project_name = "NRC-Jan2022-serine-glucose-dss"
+#project_name = "NRC-Jan2022-serine-glucose-dss"
 
 #project_name = "Isoleucine-BMRB-700-20mM"
 #project_name = "Glutamine-BMRB-700-20mM"
@@ -70,6 +70,7 @@ project_name = "NRC-Jan2022-serine-glucose-dss"
 
 #molecule_names = ["Ethanol";]
 #molecule_names = ["D-Glucose - 2000 study";] #molecule_names = ["D-(+)-Glucose";]
+molecule_names = ["D-(+)-Glucose";]
 #molecule_names = ["L-Serine";]
 #molecule_names = ["L-Serine - 2000 study";] # molecule_names = ["L-Serine";]
 
@@ -78,7 +79,7 @@ project_name = "NRC-Jan2022-serine-glucose-dss"
 #molecule_names = ["L-Serine"; "D-(+)-Glucose"; "L-Glutamine"; "L-Isoleucine"; "L-Leucine"; "DSS"]
 
 #molecule_names = ["L-Serine"; "D-(+)-Glucose"; "L-Leucine"; ]
-molecule_names = ["L-Serine"; "D-(+)-Glucose"; "DSS"; ] # really need plots that highlights regions and compounds.
+#molecule_names = ["L-Serine"; "D-(+)-Glucose"; "DSS"; ] # really need plots that highlights regions and compounds.
 
 #molecule_names = ["L-Isoleucine";]
 #molecule_names = ["L-Glutamine";]
@@ -92,7 +93,7 @@ molecule_names = ["L-Serine"; "D-(+)-Glucose"; "DSS"; ] # really need plots that
 
 #molecule_names = ["L-Phenylalanine, 500 MHz"; "L-Phenylalanine"]
 
-project_base_folder = "/home/roy/MEGAsync/outputs/NMR/calibrate/align/"
+project_base_folder = "/home/roy/MEGAsync/outputs/NMR/calibrate/calibrate/"
 project_folder = joinpath(project_base_folder, project_name)
 isdir(project_folder) || mkpath(project_folder)
 
@@ -205,12 +206,17 @@ P_y = hz2ppmfunc.(U_y)
 a_setp, b_setp, minxs,
     rets = NMRCalibrate.setupitpab(0.1, 10, 0.7; optim_algorithm = :LN_BOBYQA)
 
+# new normalization.
+Z = maximum( maximum(abs.(y[cost_inds_set[r]])) for r = 1:length(cost_inds_set) )
+y = y ./ Z
+#@assert 1==3
+
 # for poster.
 #include("pkg_align_single_region.jl")
 #include("phenylalanine.jl")
 
-#include("pkg_calibrate.jl")
-include("pkg_quantify.jl")
+include("pkg_calibrate.jl")
+#include("pkg_quantify.jl")
 
 
 using Plots; plotly()

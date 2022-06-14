@@ -29,7 +29,7 @@ function alignregion(y_cost::Vector{Complex{T}},
     β_maxtime = Inf) where T <: Real
 
     # prepare.
-    N_d = sum( NMRCalibrate.getNd(Bs[n]) for n = 1:length(Bs) )
+    N_d = sum( getNd(Bs[n]) for n = 1:length(Bs) )
     @assert length(shift_ub) == length(shift_lb) == N_d
 
     U_rad_cost = U_cost .* (2*π)
@@ -124,18 +124,18 @@ function aligncompound(y::Vector{Complex{T}}, U_y, P_y, As, Bs, Es, fs, SW,
             shift_lb,
             shift_ub;
             w = w,
-            N_starts = 100,
-            local_optim_algorithm = NLopt.LN_BOBYQA,
-            xtol_rel = 1e-3,
-            maxeval = 50,
-            maxtime = Inf,
-            β_optim_algorithm = :GN_DIRECT_L,
-            κ_lb_default = 1e-2,
-            κ_ub_default = 1e2,
-            β_max_iters = 500,
-            β_xtol_rel = 1e-9,
-            β_ftol_rel = 1e-9,
-            β_maxtime = Inf)
+            N_starts = N_starts,
+            local_optim_algorithm = local_optim_algorithm,
+            xtol_rel = xtol_rel,
+            maxeval = maxeval,
+            maxtime = maxtime,
+            β_optim_algorithm = β_optim_algorithm,
+            κ_lb_default = κ_lb_default,
+            κ_ub_default = κ_ub_default,
+            β_max_iters = β_max_iters,
+            β_xtol_rel = β_xtol_rel,
+            β_ftol_rel = β_ftol_rel,
+            β_maxtime = β_maxtime)
     end
 
     return obj_funcs, minfs, minxs, rets
@@ -309,7 +309,7 @@ function alignproject(save_path::String,
         rets = setupitpab(0.1, 10, 0.7; optim_algorithm = :LN_BOBYQA)
     #
 
-    obj_funcs, minfs, minxs, rets = NMRCalibrate.aligncompound(y,
+    obj_funcs, minfs, minxs, rets = aligncompound(y,
         U_y,
         P_y,
         As,

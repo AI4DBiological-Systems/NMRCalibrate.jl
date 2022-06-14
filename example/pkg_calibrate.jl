@@ -48,6 +48,7 @@ println("Timing:")
     loop_range = loop_range,
     w = w,
     N_starts = 100,
+    #N_starts = 500, # ethanol region 1.
     local_optim_algorithm = NLopt.LN_BOBYQA,
     #xtol_rel = 1e-3,
     xtol_rel = 1e-9,
@@ -57,11 +58,13 @@ println("Timing:")
     κ_lb_default = 1e-2,
     κ_ub_default = 1e2,
     β_max_iters = 500,
+    #β_max_iters = 1000,
     β_xtol_rel = 1e-9,
     β_ftol_rel = 1e-9,
     β_maxtime = Inf);
 
 dummy = 1
+
 
 if save_BSON_flag
     save_path = joinpath(project_folder, "alignment_results.bson")
@@ -153,6 +156,13 @@ function plotalignmentresults(As, Es, w, save_folder,
         q2 = uu->NMRSpectraSimulator.evalitpproxymixture(uu, As, Es; w = w)
 
         obj_funcs[r](minxs[r])
+
+        # # debug.
+        # N_κ, N_κ_singlets = NMRCalibrate.countκ(Es)
+        # N_κ_vars = N_κ + N_κ_singlets
+        # NMRCalibrate.parseκ!(Es, ones(N_κ_vars))
+        # #
+
         q_U = q2.(U_rad)
 
         file_name = "results_real_$(r).html"

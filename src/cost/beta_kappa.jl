@@ -163,9 +163,17 @@ function costβLS(U_rad,
 
     updateβfunc(p)
 
+    # try updateκfunc(p)
+    # catch e
+    #     println("error in updateκfunc(p)")
+    # 	bt = catch_backtrace()
+    # 	showerror(stdout, e, bt)
+    # 	rethrow(e)
+    # end
+
     updateκfunc(p)
     parseκ!(Es, κ_BLS)
-
+    #println("all(isfinite.(Es)) = ", all(isfinite.(Es)))
     # ## l-2 costfunc.
     # cost = zero(T)
     # for m = 1:length(S_U)

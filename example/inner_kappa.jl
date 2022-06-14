@@ -24,7 +24,7 @@ PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "ser
 
 # run prep_full.jl first.
 
-r = 3
+r = 2
 T = Float64
 
 

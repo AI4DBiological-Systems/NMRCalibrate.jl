@@ -214,6 +214,13 @@ function costnestedd(U,
     p_β::Vector{T})::T where T <: Real
 
     updatedfunc(p)
+    # try run_optim_β_κ(p_β)
+    # catch e
+    #     println("error in run_optim_β_κ(p_β)")
+    # 	bt = catch_backtrace()
+    # 	showerror(stdout, e, bt)
+    # 	rethrow(e)
+    # end
 
     ### minimize inner problem.
     fill!(p_β, zero(T)) # always start from 0-phase?
