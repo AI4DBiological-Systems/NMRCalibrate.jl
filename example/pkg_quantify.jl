@@ -43,15 +43,15 @@ println("Timing:")
     fs,
     SW,
     Δsys_cs,
-    a_setp, b_setp, #κs_β_DOFs, κs_β_orderings,
+    a_setp, b_setp, κs_β_DOFs, κs_β_orderings,
     shift_lb,
     shift_ub,
     cost_inds_set;
     loop_range = loop_range,
-    N_starts = 100,
+    N_starts = 500,
     local_optim_algorithm = NLopt.LN_BOBYQA,
     xtol_rel = 1e-9,
-    maxeval = 50, # 2, # 50,
+    maxeval = 100, # 2, # 50,
     maxtime = Inf,
     β_optim_algorithm = :GN_DIRECT_L,
     w_lb_default = 1e-1,
@@ -72,7 +72,8 @@ if save_BSON_flag
     BSON.bson(save_path, region_min_dist = region_min_dist,
     minfs = minfs,
     minxs = minxs,
-    rets = rets)
+    rets = rets,
+    ws = ws)
 end
 
 #### visualize.

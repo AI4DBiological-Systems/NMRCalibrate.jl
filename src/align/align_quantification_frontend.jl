@@ -11,7 +11,7 @@ function alignquantificationregion(y_cost::Vector{Complex{T}},
     fs,
     SW,
     Δsys_cs,
-    a_setp, b_setp, #κs_β_DOFs, κs_β_orderings,
+    a_setp, b_setp, κs_β_DOFs, κs_β_orderings,
     shift_lb::Vector{T},
     shift_ub::Vector{T};
     LS_inds = 1:length(U_cost),
@@ -29,31 +29,33 @@ function alignquantificationregion(y_cost::Vector{Complex{T}},
     β_maxtime = Inf) where T <: Real
 
     # prepare.
-    N_d = sum( NMRCalibrate.getNd(Bs[n]) for n = 1:length(Bs) )
+    N_d = sum( getNd(Bs[n]) for n = 1:length(Bs) )
     @assert length(shift_ub) == length(shift_lb) == N_d
 
     U_rad_cost = U_cost .* (2*π)
 
     # setup inner optim over β.
     q, updatedfunc, getshiftfunc, N_vars_set,
-    run_optim, obj_func_β, E_BLS, w_BLS, b_BLS, updateβfunc,
+    run_optim, obj_func_β, E_BLS, w_BLS, b_BLS, updateβfunc, updatewfunc,
     q_β = setupcostnesteddwarpw(Es, Bs, As, fs, SW, LS_inds, U_rad_cost,
-        y_cost, Δsys_cs, a_setp, b_setp;
-        optim_algorithm = β_optim_algorithm,
+        y_cost, Δsys_cs, a_setp, b_setp, κs_β_DOFs, κs_β_orderings;
+        β_optim_algorithm = β_optim_algorithm,
         w_lb_default = w_lb_default,
         w_ub_default = w_ub_default,
-        max_iters = β_max_iters,
-        xtol_rel = β_xtol_rel,
-        ftol_rel = β_ftol_rel,
-        maxtime = β_maxtime)
+        β_max_iters = β_max_iters,
+        β_xtol_rel = β_xtol_rel,
+        β_ftol_rel = β_ftol_rel,
+        β_maxtime = β_maxtime)
 
     # set up outer optim over shifts.
     #N_β = sum( getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
-    N_β = sum( getNβ(Bs[n]) for n = 1:length(Bs) )
+    #N_β = sum( getNβ(Bs[n]) for n = 1:length(Bs) )
+    N_β = sum( getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
+
     p_β = zeros(T, N_β) # persistant buffer.
 
-    obj_func = pp->costnesteddw(U_rad_cost, y_cost, updatedfunc, pp,
-    Es, Bs, run_optim, E_BLS, w_BLS, b_BLS, p_β)
+    obj_func = pp->costnesteddw(U_rad_cost, y_cost, updatedfunc, updatewfunc,
+    pp, Es, Bs, κs_β_orderings, κs_β_DOFs, run_optim, E_BLS, w_BLS, b_BLS, p_β)
 
     # optim.
     prob = MultistartOptimization.MinimizationProblem(obj_func, shift_lb, shift_ub)
@@ -62,6 +64,8 @@ function alignquantificationregion(y_cost::Vector{Complex{T}},
     xtol_rel = xtol_rel,
     maxeval = maxeval,
     maxtime = maxtime)
+
+    println("N_starts = ", N_starts)
 
     multistart_method = MultistartOptimization.TikTak(N_starts)
     ret_mo = MultistartOptimization.multistart_minimization(multistart_method,
@@ -85,7 +89,7 @@ end
 Requires user to supply a surrogate.
 """
 function alignquantificationcompound(y::Vector{Complex{T}}, U_y, P_y, As, Bs, Es, fs, SW,
-    Δsys_cs, a_setp, b_setp, #κs_β_DOFs, κs_β_orderings::Vector{Vector{Vector{Int}}},
+    Δsys_cs, a_setp, b_setp, κs_β_DOFs, κs_β_orderings::Vector{Vector{Vector{Int}}},
     shift_lb::Vector{T},
     shift_ub::Vector{T},
     cost_inds_set::Vector{Vector{Int}};
@@ -122,7 +126,7 @@ function alignquantificationcompound(y::Vector{Complex{T}}, U_y, P_y, As, Bs, Es
             fs,
             SW,
             Δsys_cs,
-            a_setp, b_setp, #κs_β_DOFs, κs_β_orderings,
+            a_setp, b_setp, κs_β_DOFs, κs_β_orderings,
             shift_lb,
             shift_ub;
             N_starts = N_starts,

@@ -160,8 +160,7 @@ function runalignment2(shift_constants,
     As::Vector{NMRSpectraSimulator.CompoundFIDType{T, SST}},
     fs::T,
     SW::T,
-    λ_lbs, λ_ubs, κs_β_orderings,
-    κs_β_DOFs;
+    λ_lbs, λ_ubs, κs_β_DOFs, κs_β_orderings;
     optim_algorithm::Symbol = :GN_ESCH,
     max_iters = 5000,
     xtol_rel = 1e-7,
@@ -177,7 +176,7 @@ function runalignment2(shift_constants,
 
     #
     N_d = sum( getNd(As[n]) for n = 1:length(As) )
-    N_β = sum( getNβ(As[n]) for n = 1:length(As) )
+    N_β = sum( getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
     N_λ = sum( getNλ(As[n]) for n = 1:length(As) )
     # N_vars = N_d + N_β + N_λ
 

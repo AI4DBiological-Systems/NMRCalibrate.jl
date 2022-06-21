@@ -155,7 +155,7 @@ using BenchmarkTools
 
 # reference, zero shift, phase.
 N_d = sum( NMRCalibrate.getNd(As[n]) for n = 1:length(As) )
-N_β = sum( NMRCalibrate.getNβ(As[n]) for n = 1:length(As) )
+#N_β = sum( NMRCalibrate.getNβ(As[n]) for n = 1:length(As) )
 N_λ = sum( NMRCalibrate.getNλ(As[n]) for n = 1:length(As) )
 #shift_manual = zeros(T, N_d)
 #β_manual = zeros(T, N_β)

@@ -200,7 +200,7 @@ u_max = u_max,
 ######## end mixture proxy.
 
 N_d = sum( NMRCalibrate.getNd(As[n]) for n = 1:length(As) )
-N_β = sum( NMRCalibrate.getNβ(As[n]) for n = 1:length(As) )
+#N_β = sum( NMRCalibrate.getNβ(As[n]) for n = 1:length(As) )
 N_λ = sum( NMRCalibrate.getNλ(As[n]) for n = 1:length(As) )
 
 ####### cost func.

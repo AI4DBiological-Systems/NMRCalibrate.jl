@@ -27,7 +27,7 @@ Random.seed!(25)
 #cs_config_path = "/home/roy/Documents/repo/NMRData/src/input/reduced_cs_config.txt"
 SH_config_path = "/home/roy/Documents/repo/NMRData/input/SH_configs/select_compounds_SH_configs_reduce.json"
 surrogate_config_path = "/home/roy/Documents/repo/NMRData/input/surrogate_configs/select_compounds_SH_configs.json"
-fit_config_path = "/home/roy/Documents/repo/NMRData/input/fit_configs/calibrate_700MHz_type1_select_compounds.json"
+fit_config_path = "/home/roy/Documents/repo/NMRData/input/fit_configs/align_700MHz_type1_select_compounds.json"
 
 # get mapping from molecule names to their spin system info json files.
 H_params_path = "/home/roy/Documents/repo/NMRData/input/coupling_info"
@@ -35,8 +35,8 @@ dict_compound_to_filename = JSON.parsefile("/home/roy/Documents/repo/NMRData/inp
 
 # specify the NMR experiment folder
 #experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/misc/bmse000297_ethanol/"
-experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/NRC/misc/glucose/Sep-25-2018"
-#experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/similar_settings/BMRB-700-20mM/L-Serine"
+#experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/NRC/misc/glucose/Sep-25-2018"
+experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/similar_settings/BMRB-700-20mM/L-Serine"
 #experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/similar_settings/BMRB-500-0.5mM/L-Serine"
 #experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/NRC/NRC_4_amino_acid_mixture_Jan_2022/1"
 #experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/similar_settings/BMRB-700-20mM/L-Isoleucine"
@@ -51,11 +51,12 @@ experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/NRC/mi
 
 # specify where the calibration results should be saved for this experiment.
 #project_name = "ethanol"
-project_name = "NRC-glucose-2018"
-#project_name = "Serine-BMRB-700-20mM"
+#project_name = "NRC-glucose-2018"
+#project_name = "Serine-BMRB-700-20mM-force-mag-eq"
+project_name = "Serine-BMRB-700-20mM"
 #project_name = "Serine-BMRB-500-0.5mM - 2" #project_name = "Serine-BMRB-500-0.5mM"
 
-# project_name = "Serine-glucose-NRC-Jan2022"
+ #project_name = "Serine-glucose-NRC-Jan2022"
 #project_name = "NRC-Jan2022-serine-glucose-dss"
 
 #project_name = "Isoleucine-BMRB-700-20mM"
@@ -70,11 +71,13 @@ project_name = "NRC-glucose-2018"
 
 #molecule_names = ["Ethanol";]
 #molecule_names = ["D-Glucose - 2000 study";] #molecule_names = ["D-(+)-Glucose";]
-molecule_names = ["D-(+)-Glucose";]
-#molecule_names = ["L-Serine";]
+#molecule_names = ["D-(+)-Glucose";]
+molecule_names = ["L-Serine";]
 #molecule_names = ["L-Serine - 2000 study";] # molecule_names = ["L-Serine";]
 
 #molecule_names = ["L-Serine - 2000 study"; "D-Glucose - 2000 study";]
+#molecule_names = ["L-Serine"; "D-(+)-Glucose"]
+#molecule_names = ["L-Serine"; "D-(+)-Glucose"; "L-Isoleucine"]
 #molecule_names = ["L-Serine"; "D-(+)-Glucose"; "DSS"] # for debugging code with singlets.
 #molecule_names = ["L-Serine"; "D-(+)-Glucose"; "L-Glutamine"; "L-Isoleucine"; "L-Leucine"; "DSS"]
 
@@ -93,7 +96,8 @@ molecule_names = ["D-(+)-Glucose";]
 
 #molecule_names = ["L-Phenylalanine, 500 MHz"; "L-Phenylalanine"]
 
-project_base_folder = "/home/roy/MEGAsync/outputs/NMR/calibrate/calibrate/"
+project_base_folder = "/home/roy/MEGAsync/outputs/NMR/align"
+#project_base_folder = "/home/roy/MEGAsync/outputs/NMR/calibrate/calibrate" # old.
 project_folder = joinpath(project_base_folder, project_name)
 isdir(project_folder) || mkpath(project_folder)
 
@@ -111,7 +115,7 @@ offset_ppm = 0.3
 ## for surrogate construction.
 
 
-w = [1.0;] # relative concentration.
+#w = [1.0;] # relative concentration.
 
 Δcs_max_scalar_default = 0.2 # In units of ppm. interpolation border that is added to the lowest and highest resonance frequency component of the mixture being simulated.
 
@@ -209,14 +213,16 @@ a_setp, b_setp, minxs,
 # new normalization.
 Z = maximum( maximum(abs.(y[cost_inds_set[r]])) for r = 1:length(cost_inds_set) )
 y = y ./ Z
+
+# include("inner_kappa.jl")
 #@assert 1==3
 
 # for poster.
 #include("pkg_align_single_region.jl")
 #include("phenylalanine.jl")
 
-include("pkg_calibrate.jl")
-#include("pkg_quantify.jl")
+#include("pkg_calibrate.jl")
+include("pkg_quantify.jl")
 
 
 using Plots; plotly()

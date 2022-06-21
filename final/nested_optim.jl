@@ -123,7 +123,7 @@ PyPlot.title("r = $(r). load result vs data")
 ### nested optim.
 
 N_d = sum( NMRCalibrate.getNd(As[n]) for n = 1:length(As) )
-N_β = sum( NMRCalibrate.getNβ(As[n]) for n = 1:length(As) )
+#N_β = sum( NMRCalibrate.getNβ(As[n]) for n = 1:length(As) )
 N_λ = sum( NMRCalibrate.getNλ(As[n]) for n = 1:length(As) )
 p_β = zeros(N_β)
 

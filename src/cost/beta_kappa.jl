@@ -7,7 +7,8 @@ function setupβLSsolverMultistartoptim(optim_algorithm,
     As::Vector{NMRSpectraSimulator.CompoundFIDType{T, SST}},
     LS_inds,
     U_rad_cost,
-    y_cost::Vector{Complex{T}};
+    y_cost::Vector{Complex{T}},
+    κs_β_DOFs, κs_β_orderings;
     κ_lb_default = 0.2,
     κ_ub_default = 5.0,
     max_iters = 50,
@@ -20,7 +21,7 @@ function setupβLSsolverMultistartoptim(optim_algorithm,
     inner_maxtime = Inf) where {T,SST}
 
     #
-    N_β = sum( getNβ(As[n]) for n = 1:length(As) )
+    N_β = sum( getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
     β_lb = ones(T, N_β) .* (-π)
     β_ub = ones(T, N_β) .* (π)
     #β_initial = zeros(T, N_β)
@@ -59,9 +60,9 @@ function setupβLSsolver(optim_algorithm,
     As,
     LS_inds,
     U_rad_cost,
-    y_cost::Vector{Complex{T}};
-    #κs_β_DOFs::Vector{Vector{Int}},
-    #κs_β_orderings::Vector{Vector{Vector{Int}}};
+    y_cost::Vector{Complex{T}},
+    κs_β_DOFs::Vector{Vector{Int}},
+    κs_β_orderings::Vector{Vector{Vector{Int}}};
     κ_lb_default = 0.2,
     κ_ub_default = 5.0,
     max_iters = 50,
@@ -69,8 +70,8 @@ function setupβLSsolver(optim_algorithm,
     ftol_rel = 1e-9,
     maxtime = Inf) where T
 
-    #N_β = sum( getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
-    N_β = sum( getNβ(Bs[n]) for n = 1:length(Bs) )
+    N_β = sum( getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
+    #N_β = sum( getNβ(Bs[n]) for n = 1:length(Bs) )
 
     β_lb = ones(T, N_β) .* (-π)
     β_ub = ones(T, N_β) .* (π)
@@ -115,22 +116,22 @@ function setupcostβLS(Es::Vector{NMRSpectraSimulator.καFIDModelType{T, SST}},
     As,
     LS_inds,
     U0_rad,
-    y0::Vector{Complex{T}};
-    #κs_β_DOFs,
-    #κs_β_orderings;
+    y0::Vector{Complex{T}},
+    κs_β_DOFs,
+    κs_β_orderings;
     κ_lb_default = 0.2,
     κ_ub_default = 5.0) where {T <: Real, SST}
 
     w = ones(T, length(Es))
 
-    #N_β = sum( getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
-    N_β = sum( getNβ(Bs[n]) for n = 1:length(Bs) )
+    N_β = sum( getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
+    #N_β = sum( getNβ(Bs[n]) for n = 1:length(Bs) )
 
 
     st_ind_β = 1
     fin_ind_β = st_ind_β + N_β - 1
-    #updateβfunc = pp->updateβ!(Bs, κs_β_orderings, κs_β_DOFs, pp, st_ind_β)
-    updateβfunc = pp->updateβ!(Bs, pp, st_ind_β)
+    updateβfunc = pp->updateβ!(Bs, κs_β_orderings, κs_β_DOFs, pp, st_ind_β)
+    #updateβfunc = pp->updateβ!(Bs, pp, st_ind_β)
 
 
     f = uu->NMRSpectraSimulator.evalitpproxymixture(uu, Bs, Es; w = w)

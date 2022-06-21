@@ -251,47 +251,48 @@ function setupcostnesteddwarpw(Es,
     U_rad_cost,
     y_cost::Vector{Complex{T}},
     Δsys_cs::Vector{Vector{T}},
-    itp_a,
-    itp_b;
-    optim_algorithm = :GN_DIRECT_L,
+    a_setp, b_setp,
+    κs_β_DOFs, κs_β_orderings;
+    β_optim_algorithm = :GN_DIRECT_L,
     w_lb_default = 0.2,
     w_ub_default = 5.0,
-    max_iters = 500,
-    xtol_rel = 1e-9,
-    ftol_rel = 1e-9,
-    maxtime = Inf) where T <: Real
+    β_max_iters = 500,
+    β_xtol_rel = 1e-9,
+    β_ftol_rel = 1e-9,
+    β_maxtime = Inf) where T <: Real
 
 
     ##### update functions.
-    #N_β = sum( getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
+    N_β = sum( getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
     N_d = sum( getNd(Bs[n]) for n = 1:length(Bs) )
 
     st_ind_d = 1
     fin_ind_d = st_ind_d + N_d - 1
     updatedfunc = pp->updatemixturedwarp!(Bs, pp, st_ind_d, fs, SW,
-        Δsys_cs, itp_a, itp_b)
+        Δsys_cs, a_setp, b_setp)
 
     N_vars_set = [N_d; ]
 
     # β, κ update.
-    run_optim, obj_func_β, E_BLS, w_BLS, b_BLS, updateβfunc,
-    q_β = setupβLSsolverw(optim_algorithm,
-        Es, Bs, As, LS_inds, U_rad_cost, y_cost;
+    run_optim, obj_func_β, E_BLS, w_BLS, b_BLS, updateβfunc, updatewfunc,
+    q_β = setupβLSsolverw(β_optim_algorithm,
+        Es, Bs, As, LS_inds, U_rad_cost, y_cost, κs_β_DOFs, κs_β_orderings;
         w_lb_default = w_lb_default,
         w_ub_default = w_ub_default,
-        max_iters = max_iters,
-        xtol_rel = xtol_rel,
-        ftol_rel = ftol_rel,
-        maxtime = maxtime)
+        β_max_iters = β_max_iters,
+        β_xtol_rel = β_xtol_rel,
+        β_ftol_rel = β_ftol_rel,
+        β_maxtime = β_maxtime)
 
     #### extract parameters from p.
     getshiftfunc = pp->pp[st_ind_d:fin_ind_d]
 
     # model. (optional)
-    f = uu->NMRSpectraSimulator.evalitpproxymixture(uu, As, Es; w = w_BLS)
+    #f = uu->NMRSpectraSimulator.evalitpproxymixture(uu, As, Es; w = w_BLS)
+    f = q_β
 
     return f, updatedfunc, getshiftfunc, N_vars_set,
-    run_optim, obj_func_β, E_BLS, w_BLS, b_BLS, updateβfunc, q_β
+    run_optim, obj_func_β, E_BLS, w_BLS, b_BLS, updateβfunc, updatewfunc, q_β
 end
 
 ##### cost.
@@ -301,7 +302,8 @@ Note that NLopt handle exceptions gracefully. Check the termination status to se
 function costnesteddw(U,
     S_U::Vector{Complex{T}},
     updatedfunc,
-    p::Vector{T}, Es, Bs, #κs_β_orderings, κs_β_DOFs, f,
+    updatewfunc,
+    p::Vector{T}, Es, Bs, κs_β_orderings, κs_β_DOFs, #f,
     run_optim_β_κ::Function,
     E_BLS::Matrix{Complex{T}}, w_BLS::Vector{T}, b_BLS,
     p_β::Vector{T})::T where T <: Real
@@ -314,7 +316,9 @@ function costnesteddw(U,
     p_β[:] = minx # take out?
 
     # ensure Es/As is updated with the latest β.
-    updateβ!(Bs, minx, 1)
+    #updateβ!(Bs, minx, 1)
+    updateβ!(Bs, κs_β_orderings, κs_β_DOFs, minx, 1)
+    updatewfunc(1.0)
 
     # evaluate cost.
     cost = norm(reinterpret(T, E_BLS)*w_BLS - b_BLS)^2

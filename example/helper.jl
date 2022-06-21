@@ -78,12 +78,12 @@ function plotquantificationresults(As, Es, ws, save_folder,
 
         q2 = uu->NMRSpectraSimulator.evalitpproxymixture(uu, As, Es; w = ws[r])
 
-        obj_funcs[r](minxs[r])
+        cost = obj_funcs[r](minxs[r])
         #ws[r][1] = 0.0
         q_U = q2.(U_rad)
 
         file_name = "quantify_real_$(r).html"
-        title_string = "$(project_name) quantify results, region $(r), real part"
+        title_string = "$(project_name) quantify results, region $(r), real part, cost = $(cost)"
 
         plotregion(P, U, q_U, P_y, y, P_cost, y_cost, display_threshold_factor, display_reduction_factor,
             save_folder, title_string, file_name;

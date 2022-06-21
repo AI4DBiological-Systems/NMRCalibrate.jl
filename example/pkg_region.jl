@@ -51,7 +51,7 @@ q_β = NMRCalibrate.setupcostnesteddwarp(Es, Bs, As, fs, SW, LS_inds, U_rad_cost
     maxtime = β_maxtime)
 
 #
-N_β = sum( NMRCalibrate.getNβ(Bs[n]) for n = 1:length(Bs) )
+#N_β = sum( NMRCalibrate.getNβ(Bs[n]) for n = 1:length(Bs) )
 p_β = zeros(T, N_β) # persistant buffer.
 
 obj_func = pp->NMRCalibrate.costnestedd(U_rad_cost, y_cost, updatedfunc, pp,
