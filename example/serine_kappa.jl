@@ -36,24 +36,22 @@ P_cost = P_y[cost_inds_set[r]]
 
 Es = collect( NMRSpectraSimulator.καFIDModelType(Bs[i]) for i = 1:length(Bs) )
 
-Es[1].κs_α[1][:] = [1.0, 1.0, 1.0]
+Es[1].κs_α[1][:] = [3.6547181133373705, 7.4585069055388304, 5.106122985644498]
 #Es[1].core.λ0 = 2.3752439850648
-Es[1].core.ss_params.κs_λ[1] = 1.0
-#Es[1].core.ss_params.κs_β[1] = [1.7457371427914214, 2.9647985946238675, 2.5466218556915283] # calibration answer.
-Es[1].core.ss_params.κs_β[1] = [1.5664070671305295, 2.839984010713529, 2.3915878840313702]
+#Es[1].core.ss_params.κs_λ[1] = 1.0
+Es[1].core.ss_params.κs_β[1] = [1.7457371427914214, 2.9647985946238675, 2.5466218556915283] # calibration answer.
 
-#Es[1].core.ss_params.d[1] = 5.4534685586024585 # calibration answer?
-Es[1].core.ss_params.d[1] = 4.527727288274466
+#Es[1].core.ss_params.d[1] = 5.4534685586024585 # calibration answer
 
 
 #tmp = (1.7457371427914214 + 2.9647985946238675)/2
-#Es[1].core.ss_params.κs_β[1] = [tmp; tmp; 2.5466218556915283]
-Es[1].core.ss_params.κs_β[1][2] = 1.7457371427914214
+Es[1].core.ss_params.κs_β[1][2] = Es[1].core.ss_params.κs_β[1][1]
+Es[1].κs_α[1][2] = Es[1].κs_α[1][1]
 
-# originals.
-As[1].Δc_bar[1][1] = [-0.04550785321752465, -0.9527933956628394, -0.0016987511196359661]
-As[1].Δc_bar[1][2] = [-0.9542311847361354, -0.04525616042734937, -0.0005126548365153027]
-As[1].Δc_bar[1][3] = [-0.0002609620463399076, -0.0019504439098113058, -0.9977885940438487]
+# # originals.
+# As[1].Δc_bar[1][1] = [-0.04550785321752465, -0.9527933956628394, -0.0016987511196359661]
+# As[1].Δc_bar[1][2] = [-0.9542311847361354, -0.04525616042734937, -0.0005126548365153027]
+# As[1].Δc_bar[1][3] = [-0.0002609620463399076, -0.0019504439098113058, -0.9977885940438487]
 
 ## modify/test.
 #As[1].Δc_bar[1][1] = As[1].Δc_bar[1][2]
@@ -67,7 +65,7 @@ vs = collect( Es[1].core.ss_params.κs_β[1] .* As[1].Δc_bar[1][k] for k = 1:le
 
 
 # for calibration, set w to all ones.
-q2 = uu->NMRSpectraSimulator.evalitpproxymixture(uu, As, Es; w = ws[1])
+q2 = uu->NMRSpectraSimulator.evalitpproxymixture(uu, As, Es; w = ones(length(Es)))
 
 
 # eval.

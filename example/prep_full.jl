@@ -35,8 +35,8 @@ dict_compound_to_filename = JSON.parsefile("/home/roy/Documents/repo/NMRData/inp
 
 # specify the NMR experiment folder
 #experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/misc/bmse000297_ethanol/"
-#experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/NRC/misc/glucose/Sep-25-2018"
-experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/similar_settings/BMRB-700-20mM/L-Serine"
+experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/NRC/misc/glucose/Sep-25-2018"
+#experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/similar_settings/BMRB-700-20mM/L-Serine"
 #experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/similar_settings/BMRB-500-0.5mM/L-Serine"
 #experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/NRC/NRC_4_amino_acid_mixture_Jan_2022/1"
 #experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/similar_settings/BMRB-700-20mM/L-Isoleucine"
@@ -51,10 +51,11 @@ experiment_full_path = "/home/roy/Documents/repo/NMRData/experiments_1D1H/BMRB/s
 
 # specify where the calibration results should be saved for this experiment.
 #project_name = "ethanol"
-#project_name = "NRC-glucose-2018"
+project_name = "NRC-glucose-2018"
 #project_name = "Serine-BMRB-700-20mM-force-mag-eq"
-project_name = "Serine-BMRB-700-20mM"
-#project_name = "Serine-BMRB-500-0.5mM - 2" #project_name = "Serine-BMRB-500-0.5mM"
+#project_name = "Serine-BMRB-700-20mM-2000entry"
+#project_name = "Serine-BMRB-700-20mM-mod"
+#project_name = "Serine-BMRB-500-0.5mM-mod" #project_name = "Serine-BMRB-500-0.5mM"
 
  #project_name = "Serine-glucose-NRC-Jan2022"
 #project_name = "NRC-Jan2022-serine-glucose-dss"
@@ -70,9 +71,12 @@ project_name = "Serine-BMRB-700-20mM"
 #project_name = "glucose-600-bmse000855_1-poster"
 
 #molecule_names = ["Ethanol";]
+molecule_names = ["alpha-D-Glucose"; "beta-D-Glucose";]
 #molecule_names = ["D-Glucose - 2000 study";] #molecule_names = ["D-(+)-Glucose";]
 #molecule_names = ["D-(+)-Glucose";]
-molecule_names = ["L-Serine";]
+#molecule_names = ["L-Serine";]
+#molecule_names = ["L-Serine - 2000 study";]
+#molecule_names = ["L-Serine - mod";]
 #molecule_names = ["L-Serine - 2000 study";] # molecule_names = ["L-Serine";]
 
 #molecule_names = ["L-Serine - 2000 study"; "D-Glucose - 2000 study";]
@@ -97,7 +101,7 @@ molecule_names = ["L-Serine";]
 #molecule_names = ["L-Phenylalanine, 500 MHz"; "L-Phenylalanine"]
 
 project_base_folder = "/home/roy/MEGAsync/outputs/NMR/align"
-#project_base_folder = "/home/roy/MEGAsync/outputs/NMR/calibrate/calibrate" # old.
+#project_base_folder = "/home/roy/MEGAsync/outputs/NMR/calibrate" # old.
 project_folder = joinpath(project_base_folder, project_name)
 isdir(project_folder) || mkpath(project_folder)
 

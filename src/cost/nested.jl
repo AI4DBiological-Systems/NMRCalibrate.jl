@@ -39,7 +39,7 @@ function setupcostnestedλd(Es::Vector{NMRSpectraSimulator.κCompoundFIDType{T, 
     N_vars_set = [N_d; N_λ]
 
     # β, κ update.
-    run_optim, obj_func_β, E_BLS, κ_BLS, b_BLS, updateβfunc,
+    run_optim, obj_func_β, E_BLS, κ_BLS, b_BLS, updateβfunc, updateκfunc,
     q_β = setupβLSsolver(optim_algorithm,
         Es, As, LS_inds, U_rad_cost, y_cost;
         κ_lb_default = κ_lb_default,
@@ -158,7 +158,8 @@ function setupcostnesteddwarp(Es,
     y_cost::Vector{Complex{T}},
     Δsys_cs::Vector{Vector{T}},
     itp_a,
-    itp_b;
+    itp_b,
+    κs_β_DOFs, κs_β_orderings;
     w = ones(T, length(Es)),
     optim_algorithm = :GN_DIRECT_L,
     κ_lb_default = 0.2,
@@ -183,10 +184,10 @@ function setupcostnesteddwarp(Es,
     N_vars_set = [N_d; ]
 
     # β, κ update.
-    run_optim, obj_func_β, E_BLS, κ_BLS, b_BLS, updateβfunc,
+    run_optim, obj_func_β, E_BLS, κ_BLS, b_BLS, updateβfunc, updateκfunc,
     q_β = setupβLSsolver(optim_algorithm,
-        Es, Bs, As, LS_inds, U_rad_cost, y_cost;
-        #κs_β_DOFs, κs_β_orderings;
+        Es, Bs, As, LS_inds, U_rad_cost, y_cost,
+        κs_β_DOFs, κs_β_orderings;
         κ_lb_default = κ_lb_default,
         κ_ub_default = κ_ub_default,
         max_iters = max_iters,
@@ -198,7 +199,7 @@ function setupcostnesteddwarp(Es,
     getshiftfunc = pp->pp[st_ind_d:fin_ind_d]
 
     return f, updatedfunc, getshiftfunc, N_vars_set,
-    run_optim, obj_func_β, E_BLS, κ_BLS, b_BLS, updateβfunc, q_β
+    run_optim, obj_func_β, E_BLS, κ_BLS, b_BLS, updateβfunc, updateκfunc, q_β
 end
 
 ##### cost.
@@ -207,7 +208,7 @@ Note that NLopt handle exceptions gracefully. Check the termination status to se
 """
 function costnestedd(U,
     S_U::Vector{Complex{T}},
-    updatedfunc,
+    updatedfunc, updateκfunc,
     p::Vector{T}, Es, Bs, #κs_β_orderings, κs_β_DOFs, f,
     run_optim_β_κ::Function,
     E_BLS::Matrix{Complex{T}}, κ_BLS::Vector{T}, b_BLS,
@@ -230,6 +231,7 @@ function costnestedd(U,
     # ensure Es/As is updated with the latest β and κ.
     #updateβ!(Bs, κs_β_orderings, κs_β_DOFs, minx, 1)
     updateβ!(Bs, minx, 1)
+    updateκfunc(0.0)
     parseκ!(Es, κ_BLS)
 
     # evaluate cost.
@@ -316,8 +318,8 @@ function costnesteddw(U,
     p_β[:] = minx # take out?
 
     # ensure Es/As is updated with the latest β.
-    #updateβ!(Bs, minx, 1)
-    updateβ!(Bs, κs_β_orderings, κs_β_DOFs, minx, 1)
+    #updateβ!(Bs, κs_β_orderings, κs_β_DOFs, minx, 1)
+    updateβ!(Bs, minx, 1)
     updatewfunc(1.0)
 
     # evaluate cost.

@@ -38,7 +38,7 @@ N_d = sum( NMRCalibrate.getNd(Bs[n]) for n = 1:length(Bs) )
 U_rad_cost = U_cost .* (2*π)
 
 q, updatedfunc, getshiftfunc, N_vars_set,
-run_optim, obj_func_β, E_BLS, κ_BLS, b_BLS, updateβfunc,
+run_optim, obj_func_β, E_BLS, κ_BLS, b_BLS, updateβfunc, updateκfunc,
 q_β = NMRCalibrate.setupcostnesteddwarp(Es, Bs, As, fs, SW, LS_inds, U_rad_cost,
     y_cost, Δsys_cs, a_setp, b_setp; #κs_β_DOFs, κs_β_orderings;
     w = w,
@@ -54,7 +54,7 @@ q_β = NMRCalibrate.setupcostnesteddwarp(Es, Bs, As, fs, SW, LS_inds, U_rad_cost
 #N_β = sum( NMRCalibrate.getNβ(Bs[n]) for n = 1:length(Bs) )
 p_β = zeros(T, N_β) # persistant buffer.
 
-obj_func = pp->NMRCalibrate.costnestedd(U_rad_cost, y_cost, updatedfunc, pp,
+obj_func = pp->NMRCalibrate.costnestedd(U_rad_cost, y_cost, updatedfunc, updateκfunc, pp,
 Es, Bs, run_optim, E_BLS, κ_BLS, b_BLS, p_β)
 
 ### test.

@@ -32,7 +32,7 @@ w = ones(Float64, length(As))
 loop_range = 1:length(cost_inds_set)
 
 println("Timing:")
-@time obj_funcs, minfs, minxs, rets = NMRCalibrate.aligncompound(y,
+@time obj_funcs, minfs, minxs, rets = NMRCalibrate.aligncompoundκ(y,
     U_y,
     P_y,
     As,
@@ -41,7 +41,7 @@ println("Timing:")
     fs,
     SW,
     Δsys_cs,
-    a_setp, b_setp, #κs_β_DOFs, κs_β_orderings,
+    a_setp, b_setp, κs_β_DOFs, κs_β_orderings,
     shift_lb,
     shift_ub,
     cost_inds_set;

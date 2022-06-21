@@ -1,7 +1,7 @@
 # based on the contents of align.jl
 # consider changing terminology from align to calibrate.
 
-function alignregion(y_cost::Vector{Complex{T}},
+function alignregionκ(y_cost::Vector{Complex{T}},
     U_cost,
     P_cost,
     As,
@@ -36,7 +36,7 @@ function alignregion(y_cost::Vector{Complex{T}},
 
     # setup inner optim over β.
     q, updatedfunc, getshiftfunc, N_vars_set,
-    run_optim, obj_func_β, E_BLS, κ_BLS, b_BLS, updateβfunc,
+    run_optim, obj_func_β, E_BLS, κ_BLS, b_BLS, updateβfunc, updateκfunc,
     q_β = setupcostnesteddwarp(Es, Bs, As, fs, SW, LS_inds, U_rad_cost,
         y_cost, Δsys_cs, a_setp, b_setp, κs_β_DOFs, κs_β_orderings;
         w = w,
@@ -49,11 +49,11 @@ function alignregion(y_cost::Vector{Complex{T}},
         maxtime = β_maxtime)
 
     # set up outer optim over shifts.
-    N_β = sum( getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
-    #N_β = sum( getNβ(Bs[n]) for n = 1:length(Bs) )
+    #N_β = sum( getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
+    N_β = sum( getNβ(Bs[n]) for n = 1:length(Bs) )
     p_β = zeros(T, N_β) # persistant buffer.
 
-    obj_func = pp->costnestedd(U_rad_cost, y_cost, updatedfunc, pp,
+    obj_func = pp->costnestedd(U_rad_cost, y_cost, updatedfunc, updateκfunc, pp,
     #Es, Bs, κs_β_orderings, κs_β_DOFs, q, run_optim, E_BLS, κ_BLS, b_BLS, p_β)
     Es, Bs, run_optim, E_BLS, κ_BLS, b_BLS, p_β)
 
@@ -83,8 +83,8 @@ end
 """
 Requires user to supply a surrogate.
 """
-function aligncompound(y::Vector{Complex{T}}, U_y, P_y, As, Bs, Es, fs, SW,
-    Δsys_cs, a_setp, b_setp, #κs_β_DOFs, κs_β_orderings::Vector{Vector{Vector{Int}}},
+function aligncompoundκ(y::Vector{Complex{T}}, U_y, P_y, As, Bs, Es, fs, SW,
+    Δsys_cs, a_setp, b_setp, κs_β_DOFs, κs_β_orderings::Vector{Vector{Vector{Int}}},
     shift_lb::Vector{T},
     shift_ub::Vector{T},
     cost_inds_set::Vector{Vector{Int}};
@@ -111,7 +111,7 @@ function aligncompound(y::Vector{Complex{T}}, U_y, P_y, As, Bs, Es, fs, SW,
 
     for r in loop_range
         println("Working on region $(r)")
-        obj_funcs[r], minfs[r], minxs[r], rets[r] = alignregion(y[cost_inds_set[r]],
+        obj_funcs[r], minfs[r], minxs[r], rets[r] = alignregionκ(y[cost_inds_set[r]],
             U_y[cost_inds_set[r]],
             P_y[cost_inds_set[r]],
             As,
@@ -120,7 +120,7 @@ function aligncompound(y::Vector{Complex{T}}, U_y, P_y, As, Bs, Es, fs, SW,
             fs,
             SW,
             Δsys_cs,
-            a_setp, b_setp, #κs_β_DOFs, κs_β_orderings,
+            a_setp, b_setp, κs_β_DOFs, κs_β_orderings,
             shift_lb,
             shift_ub;
             w = w,

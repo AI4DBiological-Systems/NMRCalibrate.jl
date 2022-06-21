@@ -63,12 +63,14 @@ function setupcostβLSw(Es::Vector{NMRSpectraSimulator.καFIDModelType{T, SST}}
     w_lb_default = 0.2,
     w_ub_default = 5.0) where {T <: Real, SST}
 
-    N_β = sum( getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
+    #N_β = sum( getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
+    N_β = sum( getNβ(Bs[n]) for n = 1:length(Bs) )
 
 
     st_ind_β = 1
     fin_ind_β = st_ind_β + N_β - 1
-    updateβfunc = pp->updateβ!(Bs, κs_β_orderings, κs_β_DOFs, pp, st_ind_β)
+    #updateβfunc = pp->updateβ!(Bs, κs_β_orderings, κs_β_DOFs, pp, st_ind_β)
+    updateβfunc = pp->updateβ!(Bs, pp, st_ind_β)
 
     ### LS w.
     U_rad_LS = U0_rad[LS_inds]

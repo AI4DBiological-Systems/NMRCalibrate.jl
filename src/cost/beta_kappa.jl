@@ -70,8 +70,8 @@ function setupβLSsolver(optim_algorithm,
     ftol_rel = 1e-9,
     maxtime = Inf) where T
 
-    N_β = sum( getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
-    #N_β = sum( getNβ(Bs[n]) for n = 1:length(Bs) )
+    #N_β = sum( getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
+    N_β = sum( getNβ(Bs[n]) for n = 1:length(Bs) )
 
     β_lb = ones(T, N_β) .* (-π)
     β_ub = ones(T, N_β) .* (π)
@@ -81,8 +81,8 @@ function setupβLSsolver(optim_algorithm,
     p_ub = β_ub
 
     q, updateβfunc, updateκfunc, E_BLS, κ_BLS, b_BLS,
-    getβfunc = setupcostβLS(Es, Bs, As, LS_inds, U_rad_cost, y_cost;
-    #κs_β_DOFs, κs_β_orderings;
+    getβfunc = setupcostβLS(Es, Bs, As, LS_inds, U_rad_cost, y_cost,
+    κs_β_DOFs, κs_β_orderings;
         κ_lb_default = κ_lb_default,
         κ_ub_default = κ_ub_default)
 
@@ -105,7 +105,7 @@ function setupβLSsolver(optim_algorithm,
         ftol_rel = ftol_rel,
         maxtime = maxtime)
 
-    return run_optim, f, E_BLS, κ_BLS, b_BLS, updateβfunc, q
+    return run_optim, f, E_BLS, κ_BLS, b_BLS, updateβfunc, updateκfunc, q
 end
 
 """
@@ -124,14 +124,14 @@ function setupcostβLS(Es::Vector{NMRSpectraSimulator.καFIDModelType{T, SST}},
 
     w = ones(T, length(Es))
 
-    N_β = sum( getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
-    #N_β = sum( getNβ(Bs[n]) for n = 1:length(Bs) )
+    #N_β = sum( getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
+    N_β = sum( getNβ(Bs[n]) for n = 1:length(Bs) )
 
 
     st_ind_β = 1
     fin_ind_β = st_ind_β + N_β - 1
-    updateβfunc = pp->updateβ!(Bs, κs_β_orderings, κs_β_DOFs, pp, st_ind_β)
-    #updateβfunc = pp->updateβ!(Bs, pp, st_ind_β)
+    #updateβfunc = pp->updateβ!(Bs, κs_β_orderings, κs_β_DOFs, pp, st_ind_β)
+    updateβfunc = pp->updateβ!(Bs, pp, st_ind_β)
 
 
     f = uu->NMRSpectraSimulator.evalitpproxymixture(uu, Bs, Es; w = w)

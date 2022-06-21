@@ -16,7 +16,8 @@ fig_num = 1
 Random.seed!(25)
 PyPlot.matplotlib["rcParams"][:update](["font.size" => 22, "font.family" => "serif"])
 
-save_BSON_flag = true
+save_BSON_flag = false
+save_plot_flag = false
 
 N_d = sum( NMRCalibrate.getNd(Bs[n]) for n = 1:length(Bs) )
 N_β = sum( NMRCalibrate.getNβ(κs_β_DOFs[n], Bs[n]) for n = 1:length(Bs) )
@@ -48,10 +49,10 @@ println("Timing:")
     shift_ub,
     cost_inds_set;
     loop_range = loop_range,
-    N_starts = 500,
+    N_starts = 100,
     local_optim_algorithm = NLopt.LN_BOBYQA,
     xtol_rel = 1e-9,
-    maxeval = 100, # 2, # 50,
+    maxeval = 50, # 2, # 50,
     maxtime = Inf,
     β_optim_algorithm = :GN_DIRECT_L,
     w_lb_default = 1e-1,
@@ -79,13 +80,14 @@ end
 #### visualize.
 # minxs[1][1] = 0.000
 # minxs[2][1] = 0.000
-display_reduction_factor = 100
-display_threshold_factor = 0.05/10
+# display_reduction_factor = 100
+# display_threshold_factor = 0.05/10
+display_reduction_factor = 1
+display_threshold_factor = 0.001/10
 if "L-Isoleucine" in molecule_names
     display_reduction_factor = 1
     display_threshold_factor = 0.001/10
 end
-save_plot_flag = true
 display_flag = true
 
 # save data plot.

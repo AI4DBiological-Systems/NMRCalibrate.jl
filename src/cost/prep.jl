@@ -36,7 +36,6 @@ function prepareoptim(config_path::String,
 
     end
 
-
     # cs_delta_group = NMRSpecifyRegions.extractinfofromconfig( cs_config_path, molecule_names)
     # Δsys_cs = NMRSpecifyRegions.condenseΔcsconfig(cs_delta_group)
 

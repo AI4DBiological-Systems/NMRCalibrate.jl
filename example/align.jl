@@ -59,7 +59,7 @@ a_setp, b_setp, minxs,
 β_ftol_rel = 1e-9
 β_maxtime = Inf
 q, updatedfunc, getshiftfunc, N_vars_set,
-run_optim, obj_func_β, E_BLS, κ_BLS, b_BLS, updateβfunc,
+run_optim, obj_func_β, E_BLS, κ_BLS, b_BLS, updateβfunc, updateκfunc,
 q_β = NMRCalibrate.setupcostnesteddwarp(Es, Bs, As, fs, SW, LS_inds, U_rad_cost,
     y_cost, Δsys_cs, a_setp, b_setp, κs_β_DOFs, κs_β_orderings;
     w = w,
@@ -71,7 +71,7 @@ q_β = NMRCalibrate.setupcostnesteddwarp(Es, Bs, As, fs, SW, LS_inds, U_rad_cost
     ftol_rel = β_ftol_rel,
     maxtime = β_maxtime)
 #
-obj_func = pp->NMRCalibrate.costnestedd(U_rad_cost, y_cost, updatedfunc, pp,
+obj_func = pp->NMRCalibrate.costnestedd(U_rad_cost, y_cost, updatedfunc, updateκfunc, pp,
 Es, Bs, κs_β_orderings, κs_β_DOFs, q, run_optim, E_BLS, κ_BLS, b_BLS, p_β)
 
 grad_func = xx->FiniteDiff.finite_difference_gradient(obj_func, xx)
